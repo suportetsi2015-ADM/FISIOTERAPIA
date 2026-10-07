@@ -388,6 +388,14 @@ async function startServer() {
     }
     next();
   });
+  const publicImagesDir = path2.resolve(__dirname, "public/images");
+  app.use("/images", express.static(publicImagesDir, {
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }));
   app.post("/api/save-official-photo", (req, res) => {
     try {
       const { type, dataUrl } = req.body;
@@ -404,8 +412,13 @@ async function startServer() {
       const filename = type === "principal" || type === "studioHero" || type === "hero" ? "dra_leia_principal.jpg" : "dra_leia_sobre.jpg";
       const publicDir = path2.resolve(__dirname, "public/images");
       const assetsDir = path2.resolve(__dirname, "src/assets/images");
+      const distImagesDir = path2.resolve(__dirname, "dist/images");
       fs2.mkdirSync(publicDir, { recursive: true });
       fs2.mkdirSync(assetsDir, { recursive: true });
+      if (fs2.existsSync(path2.resolve(__dirname, "dist"))) {
+        fs2.mkdirSync(distImagesDir, { recursive: true });
+        fs2.writeFileSync(path2.resolve(distImagesDir, filename), buffer);
+      }
       fs2.writeFileSync(path2.resolve(publicDir, filename), buffer);
       fs2.writeFileSync(path2.resolve(assetsDir, filename), buffer);
       res.json({

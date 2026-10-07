@@ -200,6 +200,7 @@ async function pollCloudAlerts(onFound: (apt: Appointment, ts: number) => void):
   } catch (_) {}
 }
 
+const alertSubscribers = new Set<(apt: Appointment) => void>();
 let activePollingInterval: number | null = null;
 let lastKnownAlertId: string | null = null;
 let activeEventSource: EventSource | null = null;
@@ -224,6 +225,10 @@ function getBroadcastChannel(): BroadcastChannel | null {
 export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) => void): () => void {
   if (typeof window === 'undefined') return () => {};
 
+  if (onNewBooking) {
+    alertSubscribers.add(onNewBooking);
+  }
+
   // Executa sincronização inicial com o servidor
   syncAppointmentsWithServer().catch(() => {});
 
@@ -247,16 +252,18 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
         window.dispatchEvent(new CustomEvent('appointments-synced', { detail: [alertApt, ...currentApts] }));
       }
 
-      // Dispara evento global para toda a plataforma
+      // Dispara evento global para toda a plataforma e todos os ouvintes inscritos
       window.dispatchEvent(new CustomEvent('new-online-booking', { detail: alertApt }));
-      if (onNewBooking) {
-        onNewBooking(alertApt);
-      }
+      alertSubscribers.forEach((cb) => {
+        try {
+          cb(alertApt);
+        } catch (_) {}
+      });
     }
   };
 
   // Ouvinte de BroadcastChannel entre abas
-  if (channel) {
+  if (channel && !channel.onmessage) {
     channel.onmessage = (msgEvt) => {
       const data = msgEvt.data;
       if (data?.type === 'new-booking' && data.appointment) {
@@ -268,11 +275,8 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
   }
 
   // 1. Conexão Server-Sent Events (SSE) para alerta instantâneo com 0ms de atraso
-  try {
-    if (typeof EventSource !== 'undefined') {
-      if (activeEventSource) {
-        activeEventSource.close();
-      }
+  if (!activeEventSource && typeof EventSource !== 'undefined') {
+    try {
       activeEventSource = new EventSource('/api/appointments/stream');
       activeEventSource.onmessage = (e) => {
         try {
@@ -291,8 +295,8 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
       activeEventSource.onerror = () => {
         // SSE reconectará automaticamente, polling abaixo garante a entrega a cada 2.5s
       };
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
 
   // 2. Polling redundante a cada 2,5 segundos via Nuvem e via Servidor
   const pollAllChannels = async () => {
@@ -324,23 +328,15 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
     }
   };
 
-  // Executa imediatamente
-  pollAllChannels();
-
-  // Executa rigorosamente a cada 2.5 segundos conforme requisito
-  if (activePollingInterval) {
-    window.clearInterval(activePollingInterval);
+  // Garante que o intervalo contínuo de 2.5s rode em segundo plano como singleton
+  if (!activePollingInterval) {
+    pollAllChannels();
+    activePollingInterval = window.setInterval(pollAllChannels, 2500);
   }
-  activePollingInterval = window.setInterval(pollAllChannels, 2500);
 
   return () => {
-    if (activePollingInterval) {
-      window.clearInterval(activePollingInterval);
-      activePollingInterval = null;
-    }
-    if (activeEventSource) {
-      activeEventSource.close();
-      activeEventSource = null;
+    if (onNewBooking) {
+      alertSubscribers.delete(onNewBooking);
     }
   };
 }

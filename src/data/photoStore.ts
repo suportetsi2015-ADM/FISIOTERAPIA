@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import defaultHeroImg from '../assets/images/dra_leia_principal.jpg';
+import defaultPortraitImg from '../assets/images/dra_leia_sobre.jpg';
 
-// URL fixa do servidor para entrega global em qualquer dispositivo/navegador no domínio leiamarpilates.online
-export const SERVER_OFFICIAL_HERO = '/images/dra_leia_principal.jpg';
-export const SERVER_OFFICIAL_PORTRAIT = '/images/dra_leia_sobre.jpg';
+// Fotos oficiais canônicas da Dra. Léia Mar padronizadas para a One Page
+export const SERVER_OFFICIAL_HERO = defaultHeroImg;
+export const SERVER_OFFICIAL_PORTRAIT = defaultPortraitImg;
 
 const STORAGE_PORTRAIT_KEY = 'dra_leia_photo_portrait_v3';
 const STORAGE_HERO_KEY = 'dra_leia_photo_hero_v3';
@@ -15,6 +17,18 @@ export interface OfficialPhotos {
   heroIsCustom: boolean;
 }
 
+// Filtro rigoroso: descarta qualquer mock antigo gerado pelo AI Studio ou referência corrompida
+function isInvalidOrMockPhoto(val: string | null): boolean {
+  if (!val) return false;
+  return (
+    val.includes('178984') ||
+    val.includes('pilates_chair') ||
+    val.includes('dra_leia_mar_oficial') ||
+    val.includes('dra_leia_mar_portrait') ||
+    val.trim() === ''
+  );
+}
+
 export function getOfficialPhotos(): OfficialPhotos {
   if (typeof window === 'undefined') {
     return {
@@ -25,8 +39,18 @@ export function getOfficialPhotos(): OfficialPhotos {
     };
   }
 
-  const storedPortrait = localStorage.getItem(STORAGE_PORTRAIT_KEY);
-  const storedHero = localStorage.getItem(STORAGE_HERO_KEY);
+  let storedPortrait = localStorage.getItem(STORAGE_PORTRAIT_KEY);
+  let storedHero = localStorage.getItem(STORAGE_HERO_KEY);
+
+  // Limpa automaticamente qualquer resquício de fotos sugeridas antigas do AI Studio no navegador
+  if (isInvalidOrMockPhoto(storedPortrait)) {
+    localStorage.removeItem(STORAGE_PORTRAIT_KEY);
+    storedPortrait = null;
+  }
+  if (isInvalidOrMockPhoto(storedHero)) {
+    localStorage.removeItem(STORAGE_HERO_KEY);
+    storedHero = null;
+  }
 
   return {
     portrait: storedPortrait || SERVER_OFFICIAL_PORTRAIT,

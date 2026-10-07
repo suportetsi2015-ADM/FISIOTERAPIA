@@ -32,6 +32,7 @@ import { useClinicData } from '../data/clinicStore';
 import {
   getAppointments,
   getPendingAlertAppointment,
+  dismissPendingAlertAppointment,
   bookAppointment,
   startCrossDeviceAlertPolling,
   PENDING_ALERT_STORAGE_KEY
@@ -77,7 +78,6 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
 
   // Estados de oscilação clicados pelo usuário conforme Tela 21
   const [hasClickedOnlineAlert, setHasClickedOnlineAlert] = useState(false);
-  const [hasClickedAgenda, setHasClickedAgenda] = useState(false);
 
   // Monitora agendamentos em tempo real via servidor (recebe alertas de celulares, tablets e outros computadores)
   useEffect(() => {
@@ -97,7 +97,6 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
         setIsAlertModalOpen(true);
         setAppointments(getAppointments());
         setHasClickedOnlineAlert(false);
-        setHasClickedAgenda(false);
       }
     };
 
@@ -110,7 +109,6 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
           setAlertAppointment(pending);
           setIsAlertModalOpen(true);
           setHasClickedOnlineAlert(false);
-          setHasClickedAgenda(false);
         }
       }
     };
@@ -120,9 +118,16 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
       setAppointments(getAppointments());
     };
 
+    // Ouvinte de alerta silenciado
+    const handleAlertSilenced = () => {
+      setIsAlertModalOpen(false);
+      setAppointments(getAppointments());
+    };
+
     window.addEventListener('new-online-booking', handleNewBooking);
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('appointments-synced', handleAppointmentsSynced);
+    window.addEventListener('alert-silenced', handleAlertSilenced);
 
     // Inicia monitoramento ativo do servidor para capturar cadastros vindos de celulares e outros dispositivos externos
     const stopCrossDevicePolling = startCrossDeviceAlertPolling((serverApt) => {
@@ -130,7 +135,6 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
       setIsAlertModalOpen(true);
       setAppointments(getAppointments());
       setHasClickedOnlineAlert(false);
-      setHasClickedAgenda(false);
     });
 
     return () => {
@@ -138,6 +142,7 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
       window.removeEventListener('new-online-booking', handleNewBooking);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('appointments-synced', handleAppointmentsSynced);
+      window.removeEventListener('alert-silenced', handleAlertSilenced);
     };
   }, [isAuthenticated]);
 
@@ -295,13 +300,15 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Botão de Alerta Ativo se houver agendamento pendente: VERMELHO com letra BRANCO e oscilando até que alguém clique conforme Tela 21 */}
+              {/* Botão de Alerta Ativo se houver agendamento pendente: VERMELHO com letra BRANCO e oscilando até que alguém clique */}
               {pendingCount > 0 && (
                 <button
                   type="button"
                   onClick={() => {
                     setHasClickedOnlineAlert(true);
-                    const pending = getPendingAlertAppointment() || appointments.find(a => a.status === 'pendente');
+                    const freshApts = getAppointments();
+                    setAppointments(freshApts);
+                    const pending = getPendingAlertAppointment() || freshApts.find(a => a.status === 'pendente') || appointments.find(a => a.status === 'pendente');
                     if (pending) {
                       setAlertAppointment(pending);
                       setIsAlertModalOpen(true);
@@ -392,26 +399,21 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
               <span>DASHBOARD</span>
             </button>
 
-            {/* 4. Agenda & Marcações - AMARELO com letra PRETA e oscilando até alguém clicar conforme Tela 21 */}
+            {/* 4. Agenda & Marcações - Cor padrão da plataforma com contador de novos cadastros */}
             <button
-              onClick={() => {
-                setActiveTab('appointments');
-                setHasClickedAgenda(true);
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                pendingCount > 0 && !hasClickedAgenda
-                  ? 'bg-[#FACC15] text-black font-extrabold shadow-md border border-amber-500 animate-oscillate-yellow'
-                  : activeTab === 'appointments'
+              onClick={() => setActiveTab('appointments')}
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'appointments'
                   ? 'bg-[#D85072] text-white shadow-xs font-bold'
                   : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
               }`}
             >
-              <Calendar className={`w-4 h-4 ${pendingCount > 0 && !hasClickedAgenda ? 'text-black' : ''}`} />
+              <Calendar className="w-4 h-4" />
               <span>Agenda & Marcações</span>
               {pendingCount > 0 && (
                 <span className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold ${
-                  pendingCount > 0 && !hasClickedAgenda
-                    ? 'bg-black text-[#FACC15]'
+                  activeTab === 'appointments'
+                    ? 'bg-white text-[#D85072]'
                     : 'bg-[#D85072] text-white'
                 }`}>
                   {pendingCount}
@@ -544,6 +546,23 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
       <footer className="bg-white border-t border-[#FCD6E0] py-4 text-center text-xs text-[#8C3B50]">
         <span>Portal do Usuário • {clinic.name} • CREFITO {clinic.crefito} • Sistema Restrito em Conformidade com a LGPD</span>
       </footer>
+
+      {/* MODAL OFICIAL DE ALERTA ONLINE DO PORTAL DO USUÁRIO */}
+      <OnlineBookingAlertModal
+        isOpen={isAlertModalOpen}
+        appointment={alertAppointment}
+        onClose={() => {
+          setIsAlertModalOpen(false);
+          if (alertAppointment?.id) {
+            dismissPendingAlertAppointment(alertAppointment.id);
+          }
+          setAppointments(getAppointments());
+        }}
+        onConfirmed={(updatedApt) => {
+          setAlertAppointment(updatedApt);
+          setAppointments(getAppointments());
+        }}
+      />
     </div>
   );
 };

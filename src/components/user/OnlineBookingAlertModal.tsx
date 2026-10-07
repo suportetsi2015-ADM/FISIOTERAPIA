@@ -406,7 +406,7 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
                   )}
                 </button>
 
-                {appointment.patientEmail ? (
+                {appointment.patientEmail && (
                   <a
                     href={`mailto:${appointment.patientEmail}?subject=${encodeURIComponent(`Confirmação de Agendamento • ${CLINIC_INFO.name}`)}&body=${encodeURIComponent(confirmationMessage)}`}
                     className="py-2 px-2.5 rounded-xl border border-[#FCD6E0] bg-[#FFF9F7] hover:bg-[#FFEBF0] text-xs font-bold text-[#8C3B50] flex items-center justify-center gap-1.5 transition-colors"
@@ -414,26 +414,6 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
                     <Mail className="w-3.5 h-3.5" />
                     <span>Disparar E-mail</span>
                   </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== 'undefined' && 'Notification' in window) {
-                        if (Notification.permission === 'granted') {
-                          new Notification('Agendamento Confirmado!', {
-                            body: `${appointment.patientName} em ${formatDateBR(appointment.date)} às ${appointment.timeSlot}h`,
-                            icon: '/favicon.ico'
-                          });
-                        } else if (Notification.permission !== 'denied') {
-                          Notification.requestPermission();
-                        }
-                      }
-                    }}
-                    className="py-2 px-2.5 rounded-xl border border-[#FCD6E0] bg-[#FFF9F7] hover:bg-[#FFEBF0] text-xs font-bold text-[#8C3B50] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Push Web Browser</span>
-                  </button>
                 )}
               </div>
             </div>
@@ -460,7 +440,7 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
                     <strong>1. Link Direto WhatsApp Click-to-Chat (Nativo e Sem Custo):</strong> É a solução mais eficaz no Brasil. O sistema gera a mensagem oficial com 1 clique usando o protocolo gratuito oficial do WhatsApp (`wa.me` ou `api.whatsapp.com`), sem taxa mensal de robôs ou servidores caros.
                   </p>
                   <p>
-                    <strong>2. Web Push Notifications (Gratuito no Navegador):</strong> Usando a Notification API nativa do HTML5, o cliente recebe o aviso na tela do smartphone ou computador instantaneamente enquanto estiver com a plataforma aberta.
+                    <strong>2. E-mail de Confirmação Oficial (Gratuito):</strong> Envio direto com os dados da consulta, horário e orientações prévias formatadas de forma acolhedora.
                   </p>
                   <p>
                     <strong>3. Google Apps Script / EmailJS (Grátis):</strong> Envio automático via script gratuito do Google Workspace (Gmail da clínica) ou cota gratuita mensal do EmailJS para envio sem cobrança.

@@ -75,9 +75,14 @@ function officialPhotosPlugin() {
               const rootDir = import.meta.dirname || process.cwd();
               const publicDir = path.resolve(rootDir, 'public/images');
               const assetsDir = path.resolve(rootDir, 'src/assets/images');
+              const distImagesDir = path.resolve(rootDir, 'dist/images');
 
               fs.mkdirSync(publicDir, { recursive: true });
               fs.mkdirSync(assetsDir, { recursive: true });
+              if (fs.existsSync(path.resolve(rootDir, 'dist'))) {
+                fs.mkdirSync(distImagesDir, { recursive: true });
+                fs.writeFileSync(path.resolve(distImagesDir, filename), buffer);
+              }
 
               const publicPath = path.resolve(publicDir, filename);
               const assetsPath = path.resolve(assetsDir, filename);

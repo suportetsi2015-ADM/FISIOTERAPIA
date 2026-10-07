@@ -34,6 +34,16 @@ async function startServer() {
     next();
   });
 
+  // 2.1 Servir imagens estáticas da pasta public/images com anti-cache para garantir a entrega das fotos originais
+  const publicImagesDir = path.resolve(__dirname, 'public/images');
+  app.use('/images', express.static(publicImagesDir, {
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }));
+
   // 3. Rota especializada para salvar fotos oficiais
   app.post('/api/save-official-photo', (req, res) => {
     try {
@@ -55,8 +65,14 @@ async function startServer() {
 
       const publicDir = path.resolve(__dirname, 'public/images');
       const assetsDir = path.resolve(__dirname, 'src/assets/images');
+      const distImagesDir = path.resolve(__dirname, 'dist/images');
+
       fs.mkdirSync(publicDir, { recursive: true });
       fs.mkdirSync(assetsDir, { recursive: true });
+      if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
+        fs.mkdirSync(distImagesDir, { recursive: true });
+        fs.writeFileSync(path.resolve(distImagesDir, filename), buffer);
+      }
 
       fs.writeFileSync(path.resolve(publicDir, filename), buffer);
       fs.writeFileSync(path.resolve(assetsDir, filename), buffer);

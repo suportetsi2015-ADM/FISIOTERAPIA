@@ -401,20 +401,22 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL GLOBAL DE ALERTA ONLINE: ATIVO EM QUALQUER TELA DA PLATAFORMA */}
-      <OnlineBookingAlertModal
-        isOpen={isGlobalAlertOpen}
-        appointment={globalAlertAppointment}
-        onClose={() => {
-          setIsGlobalAlertOpen(false);
-          if (globalAlertAppointment?.id) {
-            dismissPendingAlertAppointment(globalAlertAppointment.id);
-          }
-        }}
-        onConfirmed={(updatedApt) => {
-          setGlobalAlertAppointment(updatedApt);
-        }}
-      />
+      {/* MODAL GLOBAL DE ALERTA ONLINE: ATIVO NA LANDING PAGE E NO PAINEL ADMINISTRATIVO */}
+      {activePortal !== 'usuario' && (
+        <OnlineBookingAlertModal
+          isOpen={isGlobalAlertOpen}
+          appointment={globalAlertAppointment}
+          onClose={() => {
+            setIsGlobalAlertOpen(false);
+            if (globalAlertAppointment?.id) {
+              dismissPendingAlertAppointment(globalAlertAppointment.id);
+            }
+          }}
+          onConfirmed={(updatedApt) => {
+            setGlobalAlertAppointment(updatedApt);
+          }}
+        />
+      )}
     </>
   );
 }
