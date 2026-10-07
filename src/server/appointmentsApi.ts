@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Appointment, ScheduleConfig } from '../types';
+import { Appointment, ScheduleConfig } from '../types.ts';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const APPOINTMENTS_FILE = path.resolve(DATA_DIR, 'appointments.json');

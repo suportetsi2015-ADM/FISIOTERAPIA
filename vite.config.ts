@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 import {defineConfig} from 'vite';
-import { handleAppointmentsApi } from './src/server/appointmentsApi';
+import { handleAppointmentsApi } from './src/server/appointmentsApi.ts';
 
 function appointmentsBackendPlugin() {
   return {
@@ -72,8 +72,9 @@ function officialPhotosPlugin() {
                   ? 'dra_leia_principal.jpg'
                   : 'dra_leia_sobre.jpg';
 
-              const publicDir = path.resolve(__dirname, 'public/images');
-              const assetsDir = path.resolve(__dirname, 'src/assets/images');
+              const rootDir = import.meta.dirname || process.cwd();
+              const publicDir = path.resolve(rootDir, 'public/images');
+              const assetsDir = path.resolve(rootDir, 'src/assets/images');
 
               fs.mkdirSync(publicDir, { recursive: true });
               fs.mkdirSync(assetsDir, { recursive: true });
@@ -105,18 +106,19 @@ function officialPhotosPlugin() {
 }
 
 export default defineConfig(() => {
+  const rootDir = import.meta.dirname || process.cwd();
   return {
     plugins: [react(), tailwindcss(), appointmentsBackendPlugin(), officialPhotosPlugin()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(rootDir, '.'),
       },
     },
     build: {
       rollupOptions: {
         input: {
-          main: path.resolve(__dirname, 'index.html'),
-          admin: path.resolve(__dirname, 'admin.html'),
+          main: path.resolve(rootDir, 'index.html'),
+          admin: path.resolve(rootDir, 'admin.html'),
         },
       },
     },
