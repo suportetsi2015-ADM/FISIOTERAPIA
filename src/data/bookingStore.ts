@@ -227,17 +227,34 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
 
   if (onNewBooking) {
     alertSubscribers.add(onNewBooking);
+    // Notifica imediatamente o novo assinante se já houver um alerta pendente ativo
+    setTimeout(() => {
+      const activePending = getPendingAlertAppointment();
+      if (activePending) {
+        try {
+          onNewBooking(activePending);
+        } catch (_) {}
+      }
+    }, 50);
   }
 
   // Executa sincronização inicial com o servidor
-  syncAppointmentsWithServer().catch(() => {});
+  syncAppointmentsWithServer().then((serverApts) => {
+    const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
+    const unacked = serverApts.find(a => a.status === 'pendente' && a.id !== ackedId);
+    if (unacked) {
+      triggerAlert(unacked, Date.now());
+    }
+  }).catch(() => {});
 
   const channel = getBroadcastChannel();
 
   const triggerAlert = (alertApt: Appointment, timestamp: number = Date.now()) => {
     const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
-    if (alertApt.status === 'pendente' && alertApt.id !== ackedId && alertApt.id !== lastKnownAlertId) {
+    if (alertApt.status === 'pendente' && alertApt.id !== ackedId) {
+      const isNewAlert = alertApt.id !== lastKnownAlertId;
       lastKnownAlertId = alertApt.id;
+
       const alertPayload = JSON.stringify({
         id: alertApt.id,
         appointment: alertApt,
@@ -293,14 +310,14 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
         } catch (_) {}
       };
       activeEventSource.onerror = () => {
-        // SSE reconectará automaticamente, polling abaixo garante a entrega a cada 2.5s
+        // SSE reconectará automaticamente, polling abaixo garante a entrega contínua
       };
     } catch (_) {}
   }
 
-  // 2. Polling redundante a cada 2,5 segundos via Nuvem e via Servidor
+  // 2. Polling contínuo redundante via servidor local e nuvem
   const pollAllChannels = async () => {
-    // 2.1 Polling da Nuvem (garante recepção de celulares mesmo em hospedagem estática/CDN)
+    // 2.1 Polling da Nuvem (opcional)
     pollCloudAlerts(triggerAlert).catch(() => {});
 
     // 2.2 Polling do servidor local
@@ -316,9 +333,18 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
             saveAppointments(data.appointments);
             window.dispatchEvent(new CustomEvent('appointments-synced', { detail: data.appointments }));
 
+            const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
             if (data.latestAlert && data.latestAlert.appointment && !data.latestAlert.acknowledged) {
               const alertApt = data.latestAlert.appointment as Appointment;
               triggerAlert(alertApt, data.latestAlert.timestamp || Date.now());
+            } else {
+              // Fallback: se houver qualquer cadastro pendente não reconhecido na lista
+              const unackedPending = data.appointments.find(
+                (a: Appointment) => a.status === 'pendente' && a.id !== ackedId
+              );
+              if (unackedPending) {
+                triggerAlert(unackedPending, Date.now());
+              }
             }
           }
         }
@@ -425,38 +451,37 @@ export function getPendingAlertAppointment(): Appointment | null {
   
   try {
     const raw = localStorage.getItem(PENDING_ALERT_STORAGE_KEY);
-    if (!raw) return null;
+    const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
+    const appointments = getAppointments();
 
-    let alertId = raw;
-    let alertTime = 0;
-    let cachedApt: Appointment | null = null;
+    if (raw) {
+      let alertId = raw;
+      let cachedApt: Appointment | null = null;
 
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.id) {
-        alertId = parsed.id;
-        alertTime = parsed.timestamp || 0;
-        if (parsed.appointment) {
-          cachedApt = parsed.appointment;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.id) {
+          alertId = parsed.id;
+          if (parsed.appointment) {
+            cachedApt = parsed.appointment;
+          }
+        }
+      } catch (_) {}
+
+      if (alertId !== ackedId) {
+        const match = appointments.find(a => a.id === alertId && a.status === 'pendente');
+        if (match) return match;
+        if (cachedApt && cachedApt.status === 'pendente') {
+          return cachedApt;
         }
       }
-    } catch (_) {}
-
-    // Se o alerta foi emitido há mais de 15 minutos, expira automaticamente para não tocar sozinho
-    if (alertTime && Date.now() - alertTime > 15 * 60 * 1000) {
-      localStorage.removeItem(PENDING_ALERT_STORAGE_KEY);
-      return null;
     }
 
-    const appointments = getAppointments();
-    const match = appointments.find(a => a.id === alertId && a.status === 'pendente');
-    if (match) return match;
-    if (cachedApt && cachedApt.status === 'pendente') {
-      return cachedApt;
+    // Fallback de alta disponibilidade: se houver qualquer agendamento com status pendente não silenciado
+    const unackedPending = appointments.find(a => a.status === 'pendente' && a.id !== ackedId);
+    if (unackedPending) {
+      return unackedPending;
     }
-
-    // Se o agendamento já foi confirmado ou não existe, limpa a chave
-    localStorage.removeItem(PENDING_ALERT_STORAGE_KEY);
   } catch (e) {
     console.error(e);
   }

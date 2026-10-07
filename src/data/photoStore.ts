@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import defaultHeroImg from '../assets/images/dra_leia_principal.jpg';
-import defaultPortraitImg from '../assets/images/dra_leia_sobre.jpg';
+// @ts-ignore - Vite public directory import or fallback
+import defaultHeroImg from '/images/dra_leia_principal.jpg';
+// @ts-ignore - Vite public directory import or fallback
+import defaultPortraitImg from '/images/dra_leia_sobre.jpg';
 
 // Fotos oficiais canônicas da Dra. Léia Mar padronizadas para a One Page
-export const SERVER_OFFICIAL_HERO = defaultHeroImg;
-export const SERVER_OFFICIAL_PORTRAIT = defaultPortraitImg;
+export const SERVER_OFFICIAL_HERO = (typeof defaultHeroImg === 'string' && defaultHeroImg) ? defaultHeroImg : '/images/dra_leia_principal.jpg';
+export const SERVER_OFFICIAL_PORTRAIT = (typeof defaultPortraitImg === 'string' && defaultPortraitImg) ? defaultPortraitImg : '/images/dra_leia_sobre.jpg';
 
 const STORAGE_PORTRAIT_KEY = 'dra_leia_photo_portrait_v3';
 const STORAGE_HERO_KEY = 'dra_leia_photo_hero_v3';

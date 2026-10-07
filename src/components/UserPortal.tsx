@@ -35,6 +35,7 @@ import {
   dismissPendingAlertAppointment,
   bookAppointment,
   startCrossDeviceAlertPolling,
+  syncAppointmentsWithServer,
   PENDING_ALERT_STORAGE_KEY
 } from '../data/bookingStore';
 import { Appointment } from '../types';
@@ -89,6 +90,15 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
       localStorage.removeItem('dra_leia_pending_alert_apt_id_v2');
     } catch (_) {}
 
+    // Sincroniza imediatamente com o servidor para carregar novos agendamentos feitos externamente
+    syncAppointmentsWithServer().then((serverApts) => {
+      setAppointments(serverApts);
+      const pending = serverApts.find(a => a.status === 'pendente');
+      if (pending) {
+        setAlertAppointment(pending);
+      }
+    }).catch(() => {});
+
     // Ouvinte em tempo real local (mesma aba)
     const handleNewBooking = (e: Event) => {
       const customEvt = e as CustomEvent<Appointment>;
@@ -102,9 +112,10 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
 
     // Ouvinte entre abas: SÓ ativa se um novo agendamento real for gravado em outra aba
     const handleStorageChange = (e: StorageEvent) => {
-      setAppointments(getAppointments());
+      const fresh = getAppointments();
+      setAppointments(fresh);
       if (e.key === PENDING_ALERT_STORAGE_KEY && e.newValue) {
-        const pending = getPendingAlertAppointment();
+        const pending = getPendingAlertAppointment() || fresh.find(a => a.status === 'pendente');
         if (pending) {
           setAlertAppointment(pending);
           setIsAlertModalOpen(true);
@@ -114,8 +125,13 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
     };
 
     // Ouvinte de sincronização de agendamentos com o servidor
-    const handleAppointmentsSynced = () => {
-      setAppointments(getAppointments());
+    const handleAppointmentsSynced = (e: Event) => {
+      const customEvt = e as CustomEvent<Appointment[]>;
+      if (Array.isArray(customEvt.detail)) {
+        setAppointments(customEvt.detail);
+      } else {
+        setAppointments(getAppointments());
+      }
     };
 
     // Ouvinte de alerta silenciado
@@ -147,6 +163,32 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
   }, [isAuthenticated]);
 
   // Função para simular/testar o alerta sonoro e visual a qualquer momento no Portal do Usuário
+  // Ação robusta ao clicar no botão Alerta Online
+  const handleOpenOnlineAlert = async () => {
+    setHasClickedOnlineAlert(true);
+    let freshApts = getAppointments();
+    try {
+      const serverApts = await syncAppointmentsWithServer();
+      if (Array.isArray(serverApts) && serverApts.length > 0) {
+        freshApts = serverApts;
+      }
+    } catch (_) {}
+    setAppointments(freshApts);
+
+    const pending = getPendingAlertAppointment() || freshApts.find(a => a.status === 'pendente');
+    if (pending) {
+      setAlertAppointment(pending);
+      setIsAlertModalOpen(true);
+    } else {
+      // Se não há pendências no momento, abre o último agendamento recebido para visualização
+      const latest = freshApts[0] || null;
+      if (latest) {
+        setAlertAppointment(latest);
+        setIsAlertModalOpen(true);
+      }
+    }
+  };
+
   const handleSimulateOnlineBooking = () => {
     const samplePatients = [
       { name: 'Mariana Frota Ribeiro', phone: '(92) 99182-3344', service: 'Pilates Personalizado', notes: 'Dores crônicas na cervical e ombros por trabalho remoto.' },
@@ -300,29 +342,25 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Botão de Alerta Ativo se houver agendamento pendente: VERMELHO com letra BRANCO e oscilando até que alguém clique */}
-              {pendingCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHasClickedOnlineAlert(true);
-                    const freshApts = getAppointments();
-                    setAppointments(freshApts);
-                    const pending = getPendingAlertAppointment() || freshApts.find(a => a.status === 'pendente') || appointments.find(a => a.status === 'pendente');
-                    if (pending) {
-                      setAlertAppointment(pending);
-                      setIsAlertModalOpen(true);
-                    }
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#DC2626] hover:bg-[#B91C1C] transition-all shadow-md cursor-pointer ${
-                    !hasClickedOnlineAlert ? 'animate-oscillate-red' : ''
-                  }`}
-                  title="Alerta Online de novo agendamento"
-                >
-                  <Bell className="w-3.5 h-3.5 text-white" />
-                  <span>Alerta Online ({pendingCount})</span>
-                </button>
-              )}
+              {/* Botão de Alerta Online Oficial: SEMPRE visível e 100% operacional */}
+              <button
+                type="button"
+                onClick={handleOpenOnlineAlert}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm cursor-pointer ${
+                  pendingCount > 0
+                    ? `text-white bg-[#DC2626] hover:bg-[#B91C1C] ${!hasClickedOnlineAlert ? 'animate-oscillate-red' : ''}`
+                    : 'text-[#9C2744] bg-[#FFEBF0] hover:bg-[#FCD6E0] border border-[#FCD6E0]'
+                }`}
+                title="Alerta Online de novos agendamentos recebidos em tempo real"
+              >
+                <Bell className={`w-3.5 h-3.5 ${pendingCount > 0 ? 'text-white' : 'text-[#D85072]'}`} />
+                <span>
+                  Alerta Online{pendingCount > 0 ? ` (${pendingCount})` : ' (0)'}
+                </span>
+                {pendingCount > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                )}
+              </button>
 
               {/* Botão de Simulação / Teste do Alerta para fins de validação */}
               <button

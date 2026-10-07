@@ -43,9 +43,9 @@ export const OnlineBookingAlertModal: React.FC<OnlineBookingAlertModalProps> = (
   const [showSolutionsGuide, setShowSolutionsGuide] = useState(false);
   const [autoOpenWhatsAppTriggered, setAutoOpenWhatsAppTriggered] = useState(false);
 
-  // Inicia e encerra o som contínuo baseado no estado do modal
+  // Inicia e encerra o som contínuo baseado no estado do modal (apenas para agendamentos pendentes)
   useEffect(() => {
-    if (isOpen && appointment && !isConfirmedView) {
+    if (isOpen && appointment && !isConfirmedView && appointment.status === 'pendente') {
       if (!isSoundMuted) {
         alertSoundManager.startContinuousAlert();
       }
