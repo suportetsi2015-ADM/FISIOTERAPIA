@@ -1,0 +1,14 @@
+{
+  "appointment": {
+    "id": "APT-8547",
+    "patientName": "Paciente iPhone Externo",
+    "patientPhone": "(92) 99876-5432",
+    "date": "2026-10-07",
+    "timeSlot": "10:00",
+    "service": "Pilates Personalizado",
+    "status": "pendente",
+    "createdAt": "2026-10-06T02:36:47.049Z"
+  },
+  "timestamp": 1791254207050,
+  "acknowledged": true
+}

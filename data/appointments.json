@@ -1,0 +1,69 @@
+[
+  {
+    "id": "APT-8547",
+    "patientName": "Paciente iPhone Externo",
+    "patientPhone": "(92) 99876-5432",
+    "date": "2026-10-07",
+    "timeSlot": "10:00",
+    "service": "Pilates Personalizado",
+    "status": "pendente",
+    "createdAt": "2026-10-06T02:36:47.049Z"
+  },
+  {
+    "id": "APT-7645",
+    "patientName": "Teste Celular",
+    "patientPhone": "(92) 99999-1111",
+    "date": "2026-10-06",
+    "timeSlot": "09:00",
+    "service": "Pilates Personalizado",
+    "status": "confirmado",
+    "createdAt": "2026-10-06T02:31:39.659Z"
+  },
+  {
+    "id": "APT-1001",
+    "patientName": "Camila Vasconcelos",
+    "patientPhone": "(92) 99123-4567",
+    "patientEmail": "camila.vasconcelos@gmail.com",
+    "date": "2026-09-22",
+    "timeSlot": "08:00",
+    "service": "Avaliação Fisioterapêutica & Pilates",
+    "notes": "Dores lombares crônicas por trabalho em escritório na Cidade Nova.",
+    "status": "confirmado",
+    "createdAt": "2026-09-18T14:30:00.000Z"
+  },
+  {
+    "id": "APT-1002",
+    "patientName": "Juliana Barreto Mendes",
+    "patientPhone": "(92) 98455-8920",
+    "patientEmail": "juliana.mendes@hotmail.com",
+    "date": "2026-09-22",
+    "timeSlot": "09:00",
+    "service": "Pilates Personalizado",
+    "notes": "Fortalecimento postural e alívio de tensões nos ombros.",
+    "status": "confirmado",
+    "createdAt": "2026-09-19T09:15:00.000Z"
+  },
+  {
+    "id": "APT-1003",
+    "patientName": "Larissa Albuquerque",
+    "patientPhone": "(92) 98112-3344",
+    "date": "2026-09-23",
+    "timeSlot": "15:00",
+    "service": "Reabilitação do Movimento & Coluna",
+    "notes": "Hérnia de disco L4-L5, indicação médica para estabilização.",
+    "status": "confirmado",
+    "createdAt": "2026-09-19T10:45:00.000Z"
+  },
+  {
+    "id": "APT-1004",
+    "patientName": "Beatriz Fontes Nogueira",
+    "patientPhone": "(92) 99341-7788",
+    "patientEmail": "beatriz.fontes@yahoo.com.br",
+    "date": "2026-09-23",
+    "timeSlot": "17:00",
+    "service": "Pilates para Terceira Idade / Envelhecimento Ativo",
+    "notes": "Melhora de equilíbrio e mobilidade geral.",
+    "status": "confirmado",
+    "createdAt": "2026-09-19T11:00:00.000Z"
+  }
+]

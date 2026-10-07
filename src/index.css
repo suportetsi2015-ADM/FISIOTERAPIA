@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --color-rose-50: #FFF6F6;
+  --color-rose-100: #FFEBF0;
+  --color-rose-200: #FCD6E0;
+  --color-rose-300: #F7ADC0;
+  --color-rose-400: #EB7995;
+  --color-rose-500: #D85072;
+  --color-rose-600: #BC3859;
+  --color-rose-700: #9C2744;
+  --color-rose-800: #6F1B30;
+  --color-rose-900: #420E1B;
+
+  --color-coral-400: #F6967E;
+  --color-coral-500: #E76F51;
+  --color-coral-600: #D15537;
+
+  --color-champagne-50: #FFFDFB;
+  --color-champagne-100: #FDF6F0;
+  --color-champagne-200: #F9ECE2;
+  --color-champagne-300: #F0D9CB;
+
+  --color-sand-50: #FFFDFB;
+  --color-sand-100: #FAF4F0;
+  --color-sand-200: #F2E7E1;
+  --color-sand-300: #E4D3CA;
+  --color-sand-400: #CEB9AE;
+
+  --color-gold-400: #E8B99A;
+  --color-gold-500: #D89C76;
+  --color-gold-600: #BF825B;
+
+  --color-graphite-700: #5B444C;
+  --color-graphite-800: #3E2931;
+  --color-graphite-900: #26161B;
+
+  --color-sage-50: #F4F9F6;
+  --color-sage-100: #E6F2EB;
+  --color-sage-200: #CEE4D7;
+  --color-sage-500: #528567;
+  --color-sage-600: #3E6B51;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FFFDFB;
+  color: #26161B;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+@keyframes oscillate-red-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+  }
+}
+
+@keyframes oscillate-yellow-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.85);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(250, 204, 21, 0);
+  }
+}
+
+.animate-oscillate-red {
+  animation: oscillate-red-pulse 1.1s infinite ease-in-out;
+}
+
+.animate-oscillate-yellow {
+  animation: oscillate-yellow-pulse 1.1s infinite ease-in-out;
+}
+
+

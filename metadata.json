@@ -1,0 +1,6 @@
+{
+  "name": "Dra. Léia Mar | Fisioterapia & Pilates",
+  "description": "Pilates personalizado com olhar fisioterapêutico. Sessões individuais para força, mobilidade, postura e qualidade de vida.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
