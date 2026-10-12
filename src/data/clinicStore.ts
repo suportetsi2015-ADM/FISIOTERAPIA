@@ -130,6 +130,15 @@ export function saveStoredClinicData(data: ClinicData): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     window.dispatchEvent(new Event(CLINIC_DATA_CHANGED_EVENT));
+
+    // Sincroniza imediatamente com o servidor para refletir em todos os aparelhos externos
+    if (typeof window !== 'undefined') {
+      fetch('/api/clinic-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(() => {});
+    }
   } catch (e) {
     console.error('Erro ao salvar dados da clínica:', e);
   }
@@ -139,9 +148,27 @@ export function resetStoredClinicData(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(CLINIC_DATA_CHANGED_EVENT));
+    if (typeof window !== 'undefined') {
+      fetch('/api/clinic-data', {
+        method: 'DELETE'
+      }).catch(() => {});
+    }
   } catch (e) {
     console.error('Erro ao resetar dados da clínica:', e);
   }
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/clinic-data')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res?.success && res.data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
+        window.dispatchEvent(new Event(CLINIC_DATA_CHANGED_EVENT));
+      }
+    })
+    .catch(() => {});
 }
 
 export function useClinicData(): ClinicData {
@@ -153,9 +180,11 @@ export function useClinicData(): ClinicData {
     };
     window.addEventListener(CLINIC_DATA_CHANGED_EVENT, handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('admin-sync-clinic_data', handleUpdate);
     return () => {
       window.removeEventListener(CLINIC_DATA_CHANGED_EVENT, handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('admin-sync-clinic_data', handleUpdate);
     };
   }, []);
 

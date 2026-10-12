@@ -409,7 +409,7 @@ async function startServer() {
         return;
       }
       const buffer = Buffer.from(matches[2], "base64");
-      const filename = type === "principal" || type === "studioHero" || type === "hero" ? "dra_leia_principal.jpg" : "dra_leia_sobre.jpg";
+      const filename = type === "logo" ? "logo.png" : type === "principal" || type === "studioHero" || type === "hero" ? "dra_leia_principal.jpg" : "dra_leia_sobre.jpg";
       const publicDir = path2.resolve(__dirname, "public/images");
       const assetsDir = path2.resolve(__dirname, "src/assets/images");
       const distImagesDir = path2.resolve(__dirname, "dist/images");

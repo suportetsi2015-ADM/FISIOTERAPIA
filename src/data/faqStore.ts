@@ -23,6 +23,13 @@ export function saveStoredFaqs(faqs: FaqItem[]): void {
   try {
     localStorage.setItem(FAQ_STORAGE_KEY, JSON.stringify(faqs));
     window.dispatchEvent(new Event('dra_leia_faqs_updated'));
+    if (typeof window !== 'undefined') {
+      fetch('/api/faq-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(faqs)
+      }).catch(() => {});
+    }
   } catch (e) {
     console.error('Erro ao salvar faqs no localStorage:', e);
   }
@@ -32,10 +39,26 @@ export function resetStoredFaqs(): FaqItem[] {
   try {
     localStorage.removeItem(FAQ_STORAGE_KEY);
     window.dispatchEvent(new Event('dra_leia_faqs_updated'));
+    if (typeof window !== 'undefined') {
+      fetch('/api/faq-data', { method: 'DELETE' }).catch(() => {});
+    }
   } catch (e) {
     console.error('Erro ao resetar faqs:', e);
   }
   return INITIAL_FAQS;
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/faq-data')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+        localStorage.setItem(FAQ_STORAGE_KEY, JSON.stringify(res.data));
+        window.dispatchEvent(new Event('dra_leia_faqs_updated'));
+      }
+    })
+    .catch(() => {});
 }
 
 export function useFaqs(): {
@@ -54,9 +77,11 @@ export function useFaqs(): {
     };
     window.addEventListener('dra_leia_faqs_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('admin-sync-faq_data', handleUpdate);
     return () => {
       window.removeEventListener('dra_leia_faqs_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('admin-sync-faq_data', handleUpdate);
     };
   }, []);
 

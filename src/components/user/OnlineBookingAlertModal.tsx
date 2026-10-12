@@ -17,12 +17,14 @@ import {
   Info,
   Sparkles,
   HelpCircle,
-  FileCheck
+  FileCheck,
+  X
 } from 'lucide-react';
 import { Appointment } from '../../types';
 import { alertSoundManager } from '../../utils/alertSound';
 import { updateAppointmentStatus, dismissPendingAlertAppointment } from '../../data/bookingStore';
 import { CLINIC_INFO } from '../../data/content';
+import { formatPhoneBR } from '../../utils/phoneFormatter';
 
 interface OnlineBookingAlertModalProps {
   appointment: Appointment | null;
@@ -38,10 +40,16 @@ export const OnlineBookingAlertModal: React.FC<OnlineBookingAlertModalProps> = (
   onConfirmed
 }) => {
   const [isSoundMuted, setIsSoundMuted] = useState(false);
-  const [isConfirmedView, setIsConfirmedView] = useState(false);
+  const [isConfirmedView, setIsConfirmedView] = useState(() => appointment?.status === 'confirmado');
   const [copiedText, setCopiedText] = useState(false);
-  const [showSolutionsGuide, setShowSolutionsGuide] = useState(false);
   const [autoOpenWhatsAppTriggered, setAutoOpenWhatsAppTriggered] = useState(false);
+
+  // Sincroniza visualização confirmada se o agendamento já estiver confirmado
+  useEffect(() => {
+    if (appointment?.status === 'confirmado') {
+      setIsConfirmedView(true);
+    }
+  }, [appointment?.id, appointment?.status]);
 
   // Inicia e encerra o som contínuo baseado no estado do modal (apenas para agendamentos pendentes)
   useEffect(() => {
@@ -64,7 +72,6 @@ export const OnlineBookingAlertModal: React.FC<OnlineBookingAlertModalProps> = (
       setIsConfirmedView(false);
       setCopiedText(false);
       setAutoOpenWhatsAppTriggered(false);
-      setShowSolutionsGuide(false);
     }
   }, [isOpen]);
 
@@ -124,7 +131,10 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
     alertSoundManager.stopContinuousAlert();
     alertSoundManager.playSuccessChime();
 
-    // 2. Atualiza status no banco/localstorage para confirmado
+    // 2. Muda imediatamente para o quadro de notificação automática online (permanece na tela)
+    setIsConfirmedView(true);
+
+    // 3. Atualiza status no banco e localstorage para confirmado
     updateAppointmentStatus(appointment.id, 'confirmado');
     dismissPendingAlertAppointment(appointment.id);
 
@@ -132,9 +142,6 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
     if (onConfirmed) {
       onConfirmed(updated);
     }
-
-    // 3. Muda para o quadro de notificação automática online ao cliente
-    setIsConfirmedView(true);
   };
 
   const handleCopyMessage = () => {
@@ -197,27 +204,39 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
                 </div>
               </div>
 
-              {/* Botão de Controle de Som */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (isSoundMuted) {
-                    setIsSoundMuted(false);
-                    alertSoundManager.startContinuousAlert();
-                  } else {
-                    setIsSoundMuted(true);
-                    alertSoundManager.stopContinuousAlert();
-                  }
-                }}
-                className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-all ${
-                  isSoundMuted
-                    ? 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
-                    : 'bg-[#FFEBF0] border-[#FCD6E0] text-[#D85072] hover:bg-[#FCD6E0]'
-                }`}
-                title={isSoundMuted ? 'Ativar som contínuo' : 'Pausar som contínuo'}
-              >
-                {isSoundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 animate-pulse" />}
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* Botão de Controle de Som */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSoundMuted) {
+                      setIsSoundMuted(false);
+                      alertSoundManager.startContinuousAlert();
+                    } else {
+                      setIsSoundMuted(true);
+                      alertSoundManager.stopContinuousAlert();
+                    }
+                  }}
+                  className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                    isSoundMuted
+                      ? 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
+                      : 'bg-[#FFEBF0] border-[#FCD6E0] text-[#D85072] hover:bg-[#FCD6E0]'
+                  }`}
+                  title={isSoundMuted ? 'Ativar som contínuo' : 'Pausar som contínuo'}
+                >
+                  {isSoundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 animate-pulse" />}
+                </button>
+
+                {/* Botão Fechar Modal */}
+                <button
+                  type="button"
+                  onClick={handleDismissLater}
+                  className="p-2 rounded-xl border border-[#FCD6E0]/60 bg-white hover:bg-[#FFEBF0] text-[#8C3B50] hover:text-[#9C2744] transition-colors cursor-pointer"
+                  title="Fechar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Aviso Textual em Destaque */}
@@ -253,7 +272,7 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-[#1D7A46]">
-                      {appointment.patientPhone}
+                      {formatPhoneBR(appointment.patientPhone)}
                     </span>
                     {appointment.patientPhone && (
                       <a
@@ -345,17 +364,22 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
         ) : (
           /* ======================= TELA 2: NOTIFICAÇÃO AUTOMÁTICA ONLINE AO CLIENTE ======================= */
           <div className="p-5 sm:p-6 animate-fade-in">
-            {/* Header de Sucesso */}
-            <div className="text-center mb-4">
+            {/* Header de Sucesso com Botão de Fechar */}
+            <div className="relative text-center mb-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute right-0 top-0 p-1.5 rounded-xl text-gray-400 hover:text-[#9C2744] hover:bg-[#FFEBF0] transition-colors cursor-pointer"
+                title="Fechar notificação"
+              >
+                <X className="w-5 h-5" />
+              </button>
               <div className="w-12 h-12 rounded-2xl bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] mx-auto flex items-center justify-center mb-2 shadow-xs">
                 <FileCheck className="w-6 h-6" />
               </div>
               <h3 className="font-serif text-lg sm:text-xl font-bold text-[#1D7A46]">
                 Agendamento Confirmado com Sucesso!
               </h3>
-              <p className="text-xs text-[#5B444C] mt-1">
-                O som foi desativado e o status foi atualizado para <strong>Confirmado</strong>.
-              </p>
             </div>
 
             {/* Resumo da Notificação Online para o Cliente */}
@@ -374,17 +398,19 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
               </p>
 
               {/* Botão de Disparo Direto no WhatsApp (Solução Recomendada Sem Custo) */}
-              <button
-                type="button"
-                onClick={handleSendWhatsAppNotification}
-                className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] mb-2.5 cursor-pointer"
+              <a
+                href={whatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setAutoOpenWhatsAppTriggered(true)}
+                className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] mb-2.5 cursor-pointer no-underline"
               >
                 <MessageCircle className="w-4 h-4 text-white" />
                 <span>
                   {autoOpenWhatsAppTriggered ? 'Reenviar WhatsApp para o Cliente' : 'Enviar WhatsApp de Confirmação Agora'}
                 </span>
                 <ExternalLink className="w-3.5 h-3.5 text-white/80" />
-              </button>
+              </a>
 
               {/* Botão Copiar Texto Completo de Confirmação */}
               <div className="grid grid-cols-2 gap-2">
@@ -418,45 +444,17 @@ Qualquer dúvida ou necessidade de reagendamento, basta nos responder por aqui. 
               </div>
             </div>
 
-            {/* Painel Expansível de Soluções Viáveis e Sem Custo Solicitado no Item (b) */}
-            <div className="border border-[#FCD6E0] rounded-xl overflow-hidden mb-4 bg-[#FFFDFB]">
-              <button
-                type="button"
-                onClick={() => setShowSolutionsGuide(!showSolutionsGuide)}
-                className="w-full p-2.5 text-left text-xs font-bold text-[#8C3B50] hover:bg-[#FFEBF0] flex items-center justify-between transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <HelpCircle className="w-3.5 h-3.5 text-[#D85072]" />
-                  Como funcionam as opções automáticas e sem custo?
-                </span>
-                <span className="text-[10px] text-[#D85072] underline">
-                  {showSolutionsGuide ? 'Ocultar' : 'Ver soluções'}
-                </span>
-              </button>
-
-              {showSolutionsGuide && (
-                <div className="p-3 text-[11px] text-[#5B444C] space-y-2 border-t border-[#FCD6E0] bg-[#FFF9F7]">
-                  <p>
-                    <strong>1. Link Direto WhatsApp Click-to-Chat (Nativo e Sem Custo):</strong> É a solução mais eficaz no Brasil. O sistema gera a mensagem oficial com 1 clique usando o protocolo gratuito oficial do WhatsApp (`wa.me` ou `api.whatsapp.com`), sem taxa mensal de robôs ou servidores caros.
-                  </p>
-                  <p>
-                    <strong>2. E-mail de Confirmação Oficial (Gratuito):</strong> Envio direto com os dados da consulta, horário e orientações prévias formatadas de forma acolhedora.
-                  </p>
-                  <p>
-                    <strong>3. Google Apps Script / EmailJS (Grátis):</strong> Envio automático via script gratuito do Google Workspace (Gmail da clínica) ou cota gratuita mensal do EmailJS para envio sem cobrança.
-                  </p>
-                </div>
-              )}
-            </div>
-
             {/* Botão de Fechar Modal */}
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-3 px-4 rounded-xl bg-[#26161B] hover:bg-[#3D252D] text-white font-bold text-xs sm:text-sm transition-all shadow-xs cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-[#26161B] hover:bg-[#3D252D] text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-[0.99] cursor-pointer"
             >
               Concluir & Fechar Aviso
             </button>
+            <p className="text-[11px] text-[#8C3B50] text-center mt-2 font-medium">
+              Esta tela permanece no Portal do Usuário para notificar o paciente. Clique em Concluir quando finalizar.
+            </p>
           </div>
         )}
       </div>

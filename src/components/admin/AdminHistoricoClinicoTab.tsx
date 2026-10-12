@@ -48,6 +48,7 @@ import {
   exportReceiptToXLS,
   ReceiptData
 } from '../../data/clinicalHistoryStore';
+import { formatPhoneBR } from '../../utils/phoneFormatter';
 import { useClinicData } from '../../data/clinicStore';
 import { usePilatesClasses } from '../../data/pilatesClassesStore';
 import { numeroPorExtensoBRL } from '../../utils/numberToWordsPT';
@@ -765,7 +766,7 @@ export const AdminHistoricoClinicoTab: React.FC = () => {
                     </span>
                     <p className="flex items-center gap-1.5 text-[#26161B]">
                       <Phone className="w-3.5 h-3.5 text-[#D85072] flex-shrink-0" />
-                      <span>{patient.phone || 'Sem telefone'}</span>
+                      <span>{patient.phone ? formatPhoneBR(patient.phone) : 'Sem telefone'}</span>
                     </p>
                     <p className="flex items-center gap-1.5 text-[#5B444C]">
                       <Mail className="w-3.5 h-3.5 text-[#A8928B] flex-shrink-0" />
@@ -792,7 +793,7 @@ export const AdminHistoricoClinicoTab: React.FC = () => {
                     </p>
                     <p className="text-[#8C3B50] font-semibold flex items-center gap-1">
                       <Phone className="w-3 h-3 text-[#D85072]" />
-                      <span>{patient.emergencyContact.phone || '-'}</span>
+                      <span>{patient.emergencyContact.phone ? formatPhoneBR(patient.emergencyContact.phone) : '-'}</span>
                     </p>
                   </div>
 
@@ -3165,7 +3166,7 @@ export const AdminHistoricoClinicoTab: React.FC = () => {
                         <td className="p-2 border-b border-[#FCD6E0]/60 font-bold">{p.fullName}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60">{calculateAge(p.birthDate).label}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60">{p.cpf || '-'}</td>
-                        <td className="p-2 border-b border-[#FCD6E0]/60">{p.phone || '-'}</td>
+                        <td className="p-2 border-b border-[#FCD6E0]/60">{p.phone ? formatPhoneBR(p.phone) : '-'}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60">{p.anamnese.mainGoal}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60">
                           {p.anamnese.chronicPainOrInjury ? `Sim (${p.anamnese.chronicPainDetails || ''})` : 'Não'}

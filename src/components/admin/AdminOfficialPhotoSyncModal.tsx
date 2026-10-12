@@ -10,7 +10,7 @@ import {
   X,
   FileCheck
 } from 'lucide-react';
-import { useOfficialPhotos, processImageFile, saveOfficialPhoto, SERVER_OFFICIAL_HERO, SERVER_OFFICIAL_PORTRAIT } from '../../data/photoStore';
+import { useOfficialPhotos, processImageFile, saveOfficialPhoto, resetOfficialPhotos, SERVER_OFFICIAL_HERO, SERVER_OFFICIAL_PORTRAIT } from '../../data/photoStore';
 
 interface AdminOfficialPhotoSyncModalProps {
   isOpen: boolean;
@@ -18,12 +18,14 @@ interface AdminOfficialPhotoSyncModalProps {
 }
 
 export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalProps> = ({ isOpen, onClose }) => {
-  const { studioHero, portrait } = useOfficialPhotos();
+  const { studioHero, portrait, customLogo } = useOfficialPhotos();
   const heroInputRef = useRef<HTMLInputElement>(null);
   const sobreInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingSobre, setIsUploadingSobre] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -31,6 +33,27 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingLogo(true);
+      const dataUrl = await processImageFile(file);
+      await saveOfficialPhoto('logo', dataUrl);
+      showToast('Logo da Dra. Léia Mar atualizado e gravado no servidor!');
+    } catch (err: any) {
+      showToast(err?.message || 'Erro ao carregar o logo');
+    } finally {
+      setIsUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleResetLogo = () => {
+    resetOfficialPhotos('logo');
+    showToast('Logo restaurado para o emblema vetorial original!');
   };
 
   const handleUploadPrincipal = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,6 +232,63 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
                 <span className="text-[10px] text-center text-[#8C3B50] block mt-1.5 font-medium">
                   Salva em: <code className="bg-gray-100 px-1 py-0.5 rounded">/images/dra_leia_sobre.jpg</code>
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Logo Oficial da Marca */}
+          <div className="bg-white rounded-2xl border-2 border-[#FCD6E0] p-5 shadow-xs">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-[#FFFDFB] rounded-2xl border border-[#FCD6E0] shadow-inner flex items-center justify-center">
+                  <img
+                    src="/images/logo_oficial.png"
+                    alt="Logo Oficial Dra. Léia Mar"
+                    className="w-14 h-14 object-contain rounded-full shadow-2xs"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs uppercase tracking-wider text-[#9C2744]">
+                      Logo Oficial da Marca
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3]">
+                      Arquivo Oficial Ativo
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#5B444C] mt-1">
+                    Exibido no Cabeçalho e Rodapé da Página da Dra. Léia Mar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="hidden"
+                  onChange={handleUploadLogo}
+                />
+                <button
+                  type="button"
+                  disabled={isUploadingLogo}
+                  onClick={() => logoInputRef.current?.click()}
+                  className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#D85072] to-[#BC3859] text-white font-bold text-xs hover:from-[#BC3859] hover:to-[#9C2744] transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploadingLogo ? 'Gravando...' : 'Carregar Imagem de Logo'}</span>
+                </button>
+                {customLogo && (
+                  <button
+                    type="button"
+                    onClick={handleResetLogo}
+                    className="py-2.5 px-3 rounded-xl bg-[#FFEBF0] text-[#9C2744] hover:bg-[#FCD6E0] text-xs font-semibold transition-colors cursor-pointer"
+                    title="Restaurar emblema vetorial original"
+                  >
+                    Restaurar Vetor
+                  </button>
+                )}
               </div>
             </div>
           </div>

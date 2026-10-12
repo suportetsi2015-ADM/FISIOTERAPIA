@@ -1,5 +1,7 @@
 import { Appointment, ScheduleConfig, AppointmentStatus } from '../types';
 import { CLINIC_INFO } from './content';
+import { safeStorage } from '../utils/safeStorage';
+import { formatPhoneBR } from '../utils/phoneFormatter';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -79,7 +81,7 @@ const INITIAL_SEED_APPOINTMENTS: Appointment[] = [
 
 export function getScheduleConfig(): ScheduleConfig {
   try {
-    const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+    const saved = safeStorage.getItem(CONFIG_STORAGE_KEY);
     if (saved) {
       return JSON.parse(saved);
     }
@@ -91,23 +93,48 @@ export function getScheduleConfig(): ScheduleConfig {
 
 export function saveScheduleConfig(config: ScheduleConfig): void {
   try {
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    safeStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    window.dispatchEvent(new CustomEvent('admin-sync-schedule_config', { detail: config }));
+    if (typeof window !== 'undefined') {
+      fetch('/api/schedule-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      }).catch(() => {});
+    }
   } catch (err) {
     console.error('Erro ao salvar configurações da agenda:', err);
   }
 }
 
+// Sincronização inicial de configuração da agenda com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/schedule-config')
+    .then((r) => r.json())
+    .then((cfg) => {
+      const data = cfg?.data || cfg?.config || cfg;
+      if (data && typeof data === 'object' && Array.isArray(data.availableSlots)) {
+        safeStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data));
+        window.dispatchEvent(new CustomEvent('admin-sync-schedule_config', { detail: data }));
+      }
+    })
+    .catch(() => {});
+}
+
 export function getAppointments(): Appointment[] {
   try {
-    const saved = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
+    const saved = safeStorage.getItem(APPOINTMENTS_STORAGE_KEY);
     if (saved) {
       const parsed: Appointment[] = JSON.parse(saved);
-      // Garante que o agendamento de demonstração antigo não fique pendente
-      const sanitized = parsed.map(apt => (apt.id === 'APT-1003' && apt.status === 'pendente' ? { ...apt, status: 'confirmado' as const } : apt));
+      // Garante que o agendamento de demonstração antigo não fique pendente e que todos os telefones estejam formatados
+      const sanitized = parsed.map(apt => ({
+        ...(apt.id === 'APT-1003' && apt.status === 'pendente' ? { ...apt, status: 'confirmado' as const } : apt),
+        patientPhone: formatPhoneBR(apt.patientPhone)
+      }));
       return sanitized;
     }
     // Seed if empty
-    localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(INITIAL_SEED_APPOINTMENTS));
+    safeStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(INITIAL_SEED_APPOINTMENTS));
     return INITIAL_SEED_APPOINTMENTS;
   } catch (err) {
     console.error('Erro ao carregar agendamentos:', err);
@@ -117,7 +144,11 @@ export function getAppointments(): Appointment[] {
 
 export function saveAppointments(appointments: Appointment[]): void {
   try {
-    localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
+    const formatted = appointments.map(apt => ({
+      ...apt,
+      patientPhone: formatPhoneBR(apt.patientPhone)
+    }));
+    safeStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(formatted));
   } catch (err) {
     console.error('Erro ao salvar agendamentos:', err);
   }
@@ -240,7 +271,7 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
 
   // Executa sincronização inicial com o servidor
   syncAppointmentsWithServer().then((serverApts) => {
-    const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
+    const ackedId = safeStorage.getItem(LAST_ACKED_ALERT_KEY);
     const unacked = serverApts.find(a => a.status === 'pendente' && a.id !== ackedId);
     if (unacked) {
       triggerAlert(unacked, Date.now());
@@ -250,7 +281,7 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
   const channel = getBroadcastChannel();
 
   const triggerAlert = (alertApt: Appointment, timestamp: number = Date.now()) => {
-    const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
+    const ackedId = safeStorage.getItem(LAST_ACKED_ALERT_KEY);
     if (alertApt.status === 'pendente' && alertApt.id !== ackedId) {
       const isNewAlert = alertApt.id !== lastKnownAlertId;
       lastKnownAlertId = alertApt.id;
@@ -260,7 +291,7 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
         appointment: alertApt,
         timestamp
       });
-      localStorage.setItem(PENDING_ALERT_STORAGE_KEY, alertPayload);
+      safeStorage.setItem(PENDING_ALERT_STORAGE_KEY, alertPayload);
 
       // Garante que o agendamento externo também exista na lista local da clínica
       const currentApts = getAppointments();
@@ -306,6 +337,51 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
           } else if (payload.type === 'appointments-updated' && Array.isArray(payload.appointments)) {
             saveAppointments(payload.appointments);
             window.dispatchEvent(new CustomEvent('appointments-synced', { detail: payload.appointments }));
+          } else if (payload.type === 'admin-config-updated' && payload.entity) {
+            // Dispara atualização em tempo real para todos os módulos e abas
+            if (payload.entity === 'clinic_data' && payload.data) {
+              safeStorage.setItem('dra_leia_clinic_data_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('dra_leia_clinic_data_changed'));
+              window.dispatchEvent(new CustomEvent('admin-sync-clinic_data', { detail: payload.data }));
+            } else if (payload.entity === 'schedule_config' && payload.data) {
+              safeStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(payload.data));
+              window.dispatchEvent(new CustomEvent('admin-sync-schedule_config', { detail: payload.data }));
+            } else if (payload.entity === 'pilates_data' && payload.data) {
+              window.dispatchEvent(new CustomEvent('admin-sync-pilates_data', { detail: payload.data }));
+            } else if (payload.entity === 'clinical_patients' && payload.data) {
+              safeStorage.setItem('leiamar_clinical_history_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('clinical_patients_updated'));
+              window.dispatchEvent(new CustomEvent('admin-sync-clinical_patients', { detail: payload.data }));
+            } else if (payload.entity === 'payroll_adjustments' && payload.data) {
+              safeStorage.setItem('dra_leia_payroll_adjustments_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('dra_leia_payroll_updated'));
+              window.dispatchEvent(new CustomEvent('admin-sync-payroll_adjustments', { detail: payload.data }));
+            } else if (payload.entity === 'faq_data' && payload.data) {
+              safeStorage.setItem('dra_leia_faqs_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('dra_leia_faqs_updated'));
+              window.dispatchEvent(new CustomEvent('admin-sync-faq_data', { detail: payload.data }));
+            } else if (payload.entity === 'footer_data' && payload.data) {
+              safeStorage.setItem('dra_leia_footer_config_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('dra_leia_footer_updated'));
+              window.dispatchEvent(new CustomEvent('admin-sync-footer_data', { detail: payload.data }));
+            } else if (payload.entity === 'studio_data' && payload.data) {
+              safeStorage.setItem('dra_leia_studio_gallery_v2', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('dra_leia_studio_gallery_changed'));
+              window.dispatchEvent(new CustomEvent('admin-sync-studio_data', { detail: payload.data }));
+            } else if (payload.entity === 'auth_passwords' && payload.data) {
+              if (payload.data.adminPassword) {
+                safeStorage.setItem('dra_leia_admin_custom_password_v1', payload.data.adminPassword);
+              }
+              if (payload.data.userPassword) {
+                safeStorage.setItem('dra_leia_user_custom_password_v1', payload.data.userPassword);
+              }
+              window.dispatchEvent(new Event('dra_leia_admin_auth_changed'));
+              window.dispatchEvent(new Event('dra_leia_user_auth_changed'));
+              window.dispatchEvent(new CustomEvent('admin-sync-auth_passwords', { detail: payload.data }));
+            } else if (payload.entity === 'official_photo' && payload.data) {
+              window.dispatchEvent(new CustomEvent('admin-sync-official_photo', { detail: payload.data }));
+              window.dispatchEvent(new Event('dra_leia_photos_updated'));
+            }
           }
         } catch (_) {}
       };
@@ -333,7 +409,7 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
             saveAppointments(data.appointments);
             window.dispatchEvent(new CustomEvent('appointments-synced', { detail: data.appointments }));
 
-            const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
+            const ackedId = safeStorage.getItem(LAST_ACKED_ALERT_KEY);
             if (data.latestAlert && data.latestAlert.appointment && !data.latestAlert.acknowledged) {
               const alertApt = data.latestAlert.appointment as Appointment;
               triggerAlert(alertApt, data.latestAlert.timestamp || Date.now());
@@ -367,6 +443,13 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
   };
 }
 
+// Inicialização imediata global do monitoramento e sincronização em tempo real entre dispositivos
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    startCrossDeviceAlertPolling();
+  }, 100);
+}
+
 export function bookAppointment(params: {
   patientName: string;
   patientPhone: string;
@@ -382,7 +465,7 @@ export function bookAppointment(params: {
   const newAppointment: Appointment = {
     id: `APT-${Math.floor(1000 + Math.random() * 9000)}`,
     patientName: params.patientName.trim(),
-    patientPhone: params.patientPhone.trim(),
+    patientPhone: formatPhoneBR(params.patientPhone.trim()),
     patientEmail: params.patientEmail?.trim() || undefined,
     date: params.date,
     timeSlot: params.timeSlot,
@@ -403,7 +486,7 @@ export function bookAppointment(params: {
         appointment: newAppointment,
         timestamp: Date.now()
       });
-      localStorage.setItem(PENDING_ALERT_STORAGE_KEY, alertPayload);
+      safeStorage.setItem(PENDING_ALERT_STORAGE_KEY, alertPayload);
       window.dispatchEvent(new CustomEvent('new-online-booking', { detail: newAppointment }));
       const channel = getBroadcastChannel();
       if (channel) {
@@ -450,8 +533,8 @@ export function getPendingAlertAppointment(): Appointment | null {
   if (typeof window === 'undefined') return null;
   
   try {
-    const raw = localStorage.getItem(PENDING_ALERT_STORAGE_KEY);
-    const ackedId = localStorage.getItem(LAST_ACKED_ALERT_KEY);
+    const raw = safeStorage.getItem(PENDING_ALERT_STORAGE_KEY);
+    const ackedId = safeStorage.getItem(LAST_ACKED_ALERT_KEY);
     const appointments = getAppointments();
 
     if (raw) {
@@ -492,7 +575,7 @@ export function getPendingAlertAppointment(): Appointment | null {
 export function dismissPendingAlertAppointment(id?: string): void {
   if (typeof window !== 'undefined') {
     try {
-      const raw = localStorage.getItem(PENDING_ALERT_STORAGE_KEY);
+      const raw = safeStorage.getItem(PENDING_ALERT_STORAGE_KEY);
       let alertId = id;
       if (!alertId && raw) {
         try {
@@ -502,13 +585,13 @@ export function dismissPendingAlertAppointment(id?: string): void {
       }
 
       if (alertId) {
-        localStorage.setItem(LAST_ACKED_ALERT_KEY, alertId);
+        safeStorage.setItem(LAST_ACKED_ALERT_KEY, alertId);
         const channel = getBroadcastChannel();
         if (channel) {
           channel.postMessage({ type: 'ack-alert', id: alertId });
         }
       }
-      localStorage.removeItem(PENDING_ALERT_STORAGE_KEY);
+      safeStorage.removeItem(PENDING_ALERT_STORAGE_KEY);
 
       // Informa a nuvem e o servidor que o alerta foi silenciado/reconhecido
       broadcastAlertToCloud(null, true);
@@ -607,7 +690,7 @@ export function exportAppointmentsToXLS(appointments: Appointment[]): void {
       'Data da Sessão': formattedDate,
       'Horário': apt.timeSlot,
       'Nome da Paciente': apt.patientName,
-      'WhatsApp': apt.patientPhone,
+      'WhatsApp': formatPhoneBR(apt.patientPhone),
       'E-mail': apt.patientEmail || '-',
       'Serviço / Objetivo': apt.service,
       'Status': apt.status.toUpperCase(),
@@ -702,7 +785,7 @@ export function exportAppointmentsToPDF(appointments: Appointment[]): void {
       formattedDate,
       apt.timeSlot,
       apt.patientName,
-      apt.patientPhone,
+      formatPhoneBR(apt.patientPhone),
       apt.service,
       apt.status.toUpperCase(),
       apt.notes || '-'

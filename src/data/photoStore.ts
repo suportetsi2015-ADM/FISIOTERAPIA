@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
-// @ts-ignore - Vite public directory import or fallback
-import defaultHeroImg from '/images/dra_leia_principal.jpg';
-// @ts-ignore - Vite public directory import or fallback
-import defaultPortraitImg from '/images/dra_leia_sobre.jpg';
+import { safeStorage } from '../utils/safeStorage';
 
-// Fotos oficiais canônicas da Dra. Léia Mar padronizadas para a One Page
-export const SERVER_OFFICIAL_HERO = (typeof defaultHeroImg === 'string' && defaultHeroImg) ? defaultHeroImg : '/images/dra_leia_principal.jpg';
-export const SERVER_OFFICIAL_PORTRAIT = (typeof defaultPortraitImg === 'string' && defaultPortraitImg) ? defaultPortraitImg : '/images/dra_leia_sobre.jpg';
+// URLs canônicas oficiais da Dra. Léia Mar com controle de versão/cache-buster.
+// O parâmetro ?v=20261008_leiamar_oficial obriga navegadores como Edge, Firefox, Brave e Chrome
+// a ignorarem caches antigos e exibirem imediatamente as fotos reais e autênticas.
+export const SERVER_OFFICIAL_HERO = '/images/dra_leia_principal.jpg?v=20261008_leiamar_oficial';
+export const SERVER_OFFICIAL_PORTRAIT = '/images/dra_leia_sobre.jpg?v=20261008_leiamar_oficial';
 
-const STORAGE_PORTRAIT_KEY = 'dra_leia_photo_portrait_v3';
-const STORAGE_HERO_KEY = 'dra_leia_photo_hero_v3';
+const STORAGE_PORTRAIT_KEY = 'dra_leia_photo_portrait_v4';
+const STORAGE_HERO_KEY = 'dra_leia_photo_hero_v4';
+const STORAGE_LOGO_KEY = 'dra_leia_logo_custom_v1';
 const PHOTOS_CHANGED_EVENT = 'dra_leia_photos_updated';
 
 export interface OfficialPhotos {
   portrait: string;
   studioHero: string;
+  customLogo?: string | null;
   portraitIsCustom: boolean;
   heroIsCustom: boolean;
 }
@@ -27,8 +28,32 @@ function isInvalidOrMockPhoto(val: string | null): boolean {
     val.includes('pilates_chair') ||
     val.includes('dra_leia_mar_oficial') ||
     val.includes('dra_leia_mar_portrait') ||
+    val === '/images/dra_leia_principal.jpg' ||
+    val === '/images/dra_leia_sobre.jpg' ||
     val.trim() === ''
   );
+}
+
+// Limpa chaves legadas de versões anteriores que podem conter fotos de mock no Edge ou Firefox
+function purgeLegacyMockKeys() {
+  const legacyKeys = [
+    'dra_leia_photo_portrait',
+    'dra_leia_photo_hero',
+    'dra_leia_photo_portrait_v1',
+    'dra_leia_photo_portrait_v2',
+    'dra_leia_photo_portrait_v3',
+    'dra_leia_photo_hero_v1',
+    'dra_leia_photo_hero_v2',
+    'dra_leia_photo_hero_v3'
+  ];
+  legacyKeys.forEach((key) => {
+    try {
+      const val = safeStorage.getItem(key);
+      if (val && isInvalidOrMockPhoto(val)) {
+        safeStorage.removeItem(key);
+      }
+    } catch (_) {}
+  });
 }
 
 export function getOfficialPhotos(): OfficialPhotos {
@@ -41,38 +66,45 @@ export function getOfficialPhotos(): OfficialPhotos {
     };
   }
 
-  let storedPortrait = localStorage.getItem(STORAGE_PORTRAIT_KEY);
-  let storedHero = localStorage.getItem(STORAGE_HERO_KEY);
+  purgeLegacyMockKeys();
+
+  let storedPortrait = safeStorage.getItem(STORAGE_PORTRAIT_KEY);
+  let storedHero = safeStorage.getItem(STORAGE_HERO_KEY);
 
   // Limpa automaticamente qualquer resquício de fotos sugeridas antigas do AI Studio no navegador
   if (isInvalidOrMockPhoto(storedPortrait)) {
-    localStorage.removeItem(STORAGE_PORTRAIT_KEY);
+    safeStorage.removeItem(STORAGE_PORTRAIT_KEY);
     storedPortrait = null;
   }
   if (isInvalidOrMockPhoto(storedHero)) {
-    localStorage.removeItem(STORAGE_HERO_KEY);
+    safeStorage.removeItem(STORAGE_HERO_KEY);
     storedHero = null;
   }
+
+  const storedLogo = safeStorage.getItem(STORAGE_LOGO_KEY);
 
   return {
     portrait: storedPortrait || SERVER_OFFICIAL_PORTRAIT,
     studioHero: storedHero || SERVER_OFFICIAL_HERO,
+    customLogo: storedLogo || null,
     portraitIsCustom: Boolean(storedPortrait),
     heroIsCustom: Boolean(storedHero)
   };
 }
 
-export async function saveOfficialPhoto(type: 'portrait' | 'studioHero', dataUrl: string): Promise<void> {
-  // 1. Salva no localStorage local para renderização em tempo real instantânea
+export async function saveOfficialPhoto(type: 'portrait' | 'studioHero' | 'logo', dataUrl: string): Promise<void> {
+  // 1. Salva no storage local para renderização em tempo real instantânea
   try {
     if (type === 'portrait') {
-      localStorage.setItem(STORAGE_PORTRAIT_KEY, dataUrl);
-    } else {
-      localStorage.setItem(STORAGE_HERO_KEY, dataUrl);
+      safeStorage.setItem(STORAGE_PORTRAIT_KEY, dataUrl);
+    } else if (type === 'studioHero') {
+      safeStorage.setItem(STORAGE_HERO_KEY, dataUrl);
+    } else if (type === 'logo') {
+      safeStorage.setItem(STORAGE_LOGO_KEY, dataUrl);
     }
     window.dispatchEvent(new Event(PHOTOS_CHANGED_EVENT));
   } catch (error) {
-    console.warn('LocalStorage limit:', error);
+    console.warn('Storage limit:', error);
   }
 
   // 2. Grava de forma definitiva no servidor (public/images/ e src/assets/images/)
@@ -89,12 +121,15 @@ export async function saveOfficialPhoto(type: 'portrait' | 'studioHero', dataUrl
   }
 }
 
-export function resetOfficialPhotos(type?: 'portrait' | 'studioHero'): void {
+export function resetOfficialPhotos(type?: 'portrait' | 'studioHero' | 'logo'): void {
   if (!type || type === 'portrait') {
-    localStorage.removeItem(STORAGE_PORTRAIT_KEY);
+    safeStorage.removeItem(STORAGE_PORTRAIT_KEY);
   }
   if (!type || type === 'studioHero') {
-    localStorage.removeItem(STORAGE_HERO_KEY);
+    safeStorage.removeItem(STORAGE_HERO_KEY);
+  }
+  if (!type || type === 'logo') {
+    safeStorage.removeItem(STORAGE_LOGO_KEY);
   }
   window.dispatchEvent(new Event(PHOTOS_CHANGED_EVENT));
 }
@@ -168,10 +203,12 @@ export function useOfficialPhotos(): OfficialPhotos {
 
     window.addEventListener(PHOTOS_CHANGED_EVENT, handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('admin-sync-official_photo', handleUpdate);
 
     return () => {
       window.removeEventListener(PHOTOS_CHANGED_EVENT, handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('admin-sync-official_photo', handleUpdate);
     };
   }, []);
 

@@ -37,6 +37,7 @@ import {
   Award,
   Stethoscope,
   Tag,
+  Users,
   UserPlus,
   DollarSign,
   BarChart3,
@@ -145,8 +146,32 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
     };
   }, [isAuthenticated]);
 
+  // Sincroniza dados da clínica em tempo real caso alterados de outro dispositivo
+  useEffect(() => {
+    const handleClinicSync = () => {
+      setClinicForm(getStoredClinicData());
+    };
+    window.addEventListener('dra_leia_clinic_data_changed', handleClinicSync);
+    window.addEventListener('admin-sync-clinic_data', handleClinicSync);
+    return () => {
+      window.removeEventListener('dra_leia_clinic_data_changed', handleClinicSync);
+      window.removeEventListener('admin-sync-clinic_data', handleClinicSync);
+    };
+  }, []);
+
   // Schedule config state
   const [scheduleConfig, setScheduleConfigState] = useState<ScheduleConfig>(getScheduleConfig());
+
+  // Sincroniza configurações da agenda em tempo real
+  useEffect(() => {
+    const handleScheduleSync = () => {
+      setScheduleConfigState(getScheduleConfig());
+    };
+    window.addEventListener('admin-sync-schedule_config', handleScheduleSync);
+    return () => {
+      window.removeEventListener('admin-sync-schedule_config', handleScheduleSync);
+    };
+  }, []);
   const [newSlotInput, setNewSlotInput] = useState('');
   const [blockDateInput, setBlockDateInput] = useState('');
   const [scheduleToast, setScheduleToast] = useState(false);

@@ -15,14 +15,10 @@ export function formatAulasRealizadas(count: number | undefined | null): string 
   return `${n} aulas`;
 }
 
-export function formatCurrencyBRL(val: number | undefined | null): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(val || 0);
-}
+import { formatCurrencyBRL } from '../utils/currencyFormatter.ts';
+import { formatPhoneBR } from '../utils/phoneFormatter.ts';
+
+export { formatCurrencyBRL };
 
 // -------------------------------------------------------------
 // TABELA DE SERVIÇO & PLANOS (MENSAL, TRIMESTRAL, SEMESTRAL, ANUAL, AVULSO)
@@ -378,10 +374,27 @@ export function getStoredPilatesServices(): PilatesServiceItem[] {
   return INITIAL_SERVICES;
 }
 
+function syncPilatesDataToServer(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const payload = {
+      services: getStoredPilatesServices(),
+      professionals: getStoredProfessionals(),
+      classes: getStoredPilatesClasses()
+    };
+    fetch('/api/pilates-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  } catch (_) {}
+}
+
 export function saveStoredPilatesServices(services: PilatesServiceItem[]): void {
   try {
     localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(services));
     window.dispatchEvent(new Event('dra_leia_pilates_services_updated'));
+    syncPilatesDataToServer();
   } catch (e) {
     console.error('Erro ao salvar tabela de serviços de pilates:', e);
   }
@@ -391,6 +404,7 @@ export function resetStoredPilatesServices(): PilatesServiceItem[] {
   try {
     localStorage.removeItem(SERVICES_STORAGE_KEY);
     window.dispatchEvent(new Event('dra_leia_pilates_services_updated'));
+    syncPilatesDataToServer();
   } catch (e) {
     console.error('Erro ao resetar tabela de serviços de pilates:', e);
   }
@@ -419,6 +433,7 @@ export function saveStoredProfessionals(professionals: PilatesProfessional[]): v
   try {
     localStorage.setItem(PROFESSIONALS_STORAGE_KEY, JSON.stringify(professionals));
     window.dispatchEvent(new Event('dra_leia_pilates_professionals_updated'));
+    syncPilatesDataToServer();
   } catch (e) {
     console.error('Erro ao salvar profissionais de pilates:', e);
   }
@@ -428,6 +443,7 @@ export function resetStoredProfessionals(): PilatesProfessional[] {
   try {
     localStorage.removeItem(PROFESSIONALS_STORAGE_KEY);
     window.dispatchEvent(new Event('dra_leia_pilates_professionals_updated'));
+    syncPilatesDataToServer();
   } catch (e) {
     console.error('Erro ao resetar profissionais de pilates:', e);
   }
@@ -456,6 +472,7 @@ export function saveStoredPilatesClasses(records: PilatesClassRecord[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     window.dispatchEvent(new Event('dra_leia_pilates_classes_updated'));
+    syncPilatesDataToServer();
   } catch (e) {
     console.error('Erro ao salvar aulas de pilates:', e);
   }
@@ -465,10 +482,53 @@ export function resetStoredPilatesClasses(): PilatesClassRecord[] {
   try {
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event('dra_leia_pilates_classes_updated'));
+    syncPilatesDataToServer();
   } catch (e) {
     console.error('Erro ao resetar aulas de pilates:', e);
   }
   return INITIAL_PILATES_RECORDS;
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/pilates-data')
+    .then((r) => r.json())
+    .then((res) => {
+      const d = res?.data;
+      if (d && typeof d === 'object') {
+        if (Array.isArray(d.services) && d.services.length > 0) {
+          localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(d.services));
+          window.dispatchEvent(new Event('dra_leia_pilates_services_updated'));
+        }
+        if (Array.isArray(d.professionals) && d.professionals.length > 0) {
+          localStorage.setItem(PROFESSIONALS_STORAGE_KEY, JSON.stringify(d.professionals));
+          window.dispatchEvent(new Event('dra_leia_pilates_professionals_updated'));
+        }
+        if (Array.isArray(d.classes) && d.classes.length > 0) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(d.classes));
+          window.dispatchEvent(new Event('dra_leia_pilates_classes_updated'));
+        }
+      }
+    })
+    .catch(() => {});
+
+  window.addEventListener('admin-sync-pilates_data', ((e: CustomEvent) => {
+    const d = e.detail;
+    if (d && typeof d === 'object') {
+      if (Array.isArray(d.services)) {
+        localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(d.services));
+        window.dispatchEvent(new Event('dra_leia_pilates_services_updated'));
+      }
+      if (Array.isArray(d.professionals)) {
+        localStorage.setItem(PROFESSIONALS_STORAGE_KEY, JSON.stringify(d.professionals));
+        window.dispatchEvent(new Event('dra_leia_pilates_professionals_updated'));
+      }
+      if (Array.isArray(d.classes)) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(d.classes));
+        window.dispatchEvent(new Event('dra_leia_pilates_classes_updated'));
+      }
+    }
+  }) as EventListener);
 }
 
 export function usePilatesClasses() {
@@ -631,7 +691,7 @@ export function exportPilatesToXLS(classes: PilatesClassRecord[], titleSuffix = 
     return {
       'Profissional': c.professionalName,
       'Nome do Aluno(a)': c.studentName,
-      'Telefone / WhatsApp': c.studentPhone || '-',
+      'Telefone / WhatsApp': formatPhoneBR(c.studentPhone) || '-',
       'Tipo de Plano': c.planType,
       'Valor Total Contratado (R$)': formatCurrencyBRL(c.totalPlanValue),
       'Mensalidade / Parcela (R$)': formatCurrencyBRL(c.monthlyInstallmentValue),
@@ -722,8 +782,7 @@ export function exportPilatesToPDF(classes: PilatesClassRecord[], titleSuffix = 
   const totalProfissionais = classes.reduce((sum, c) => sum + (c.professionalPassValue || 0), 0);
   const totalAulasRealizadas = classes.reduce((sum, c) => sum + (c.attendedHours || 0), 0);
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+  const formatCurrency = (v: number) => formatCurrencyBRL(v);
 
   doc.setFontSize(8.5);
   doc.text(
@@ -735,7 +794,7 @@ export function exportPilatesToPDF(classes: PilatesClassRecord[], titleSuffix = 
   const tableData = classes.map(c => [
     c.professionalName,
     c.studentName,
-    c.studentPhone || '-',
+    formatPhoneBR(c.studentPhone) || '-',
     c.planType,
     formatCurrency(c.totalPlanValue),
     formatCurrency(c.monthlyInstallmentValue),
@@ -810,8 +869,7 @@ export function exportPilatesToPDF(classes: PilatesClassRecord[], titleSuffix = 
 // IMPRESSÃO DIRETA FORMATADA NA IMPRESSORA PADRÃO
 // -------------------------------------------------------------
 export function printPilatesReportDirect(classes: PilatesClassRecord[], titleSuffix = 'Geral'): void {
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+  const formatCurrency = (v: number) => formatCurrencyBRL(v);
 
   const today = new Date().toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -851,7 +909,7 @@ export function printPilatesReportDirect(classes: PilatesClassRecord[], titleSuf
       <td style="padding: 6px 8px; border-bottom: 1px solid #FCD6E0; font-weight: 600;">${c.professionalName}</td>
       <td style="padding: 6px 8px; border-bottom: 1px solid #FCD6E0; font-weight: 600;">
         ${c.studentName}
-        ${c.studentPhone ? `<div style="font-size: 9px; color: #1D7A46; font-weight: normal;">${c.studentPhone}</div>` : ''}
+        ${c.studentPhone ? `<div style="font-size: 9px; color: #1D7A46; font-weight: normal;">${formatPhoneBR(c.studentPhone)}</div>` : ''}
       </td>
       <td style="padding: 6px 8px; border-bottom: 1px solid #FCD6E0;">${c.planType}</td>
       <td style="padding: 6px 8px; border-bottom: 1px solid #FCD6E0; text-align: right; font-weight: 700;">${formatCurrency(c.totalPlanValue)}</td>
@@ -1173,8 +1231,7 @@ export function exportServicesToPDF(services: PilatesServiceItem[]): void {
   doc.setTextColor(91, 68, 76);
   doc.text(`Emitido em: ${today}  |  Total de Planos Cadastrados: ${services.length}`, 14, 40);
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+  const formatCurrency = (v: number) => formatCurrencyBRL(v);
 
   const tableData = services.map(s => [
     s.planCategory,
@@ -1439,8 +1496,7 @@ export function exportPilatesFinancialOnlyToPDF(classes: PilatesClassRecord[]): 
   const totalProfissionais = classes.reduce((sum, c) => sum + (c.professionalPassValue || 0), 0);
   const saldoLiquido = totalContratado - totalAcademia - totalProfissionais;
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+  const formatCurrency = (v: number) => formatCurrencyBRL(v);
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');

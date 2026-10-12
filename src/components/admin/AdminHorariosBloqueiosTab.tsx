@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Clock,
   Calendar,
@@ -31,6 +31,24 @@ export const AdminHorariosBloqueiosTab: React.FC<AdminHorariosBloqueiosTabProps>
   const [blockDateInput, setBlockDateInput] = useState('');
   const [scheduleToast, setScheduleToast] = useState<string | null>(null);
   const [isVisualReportOpen, setIsVisualReportOpen] = useState(false);
+
+  // Sincroniza configurações da agenda em tempo real entre celulares e computadores
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvt = e as CustomEvent<ScheduleConfig>;
+      if (customEvt.detail) {
+        setScheduleConfigState(customEvt.detail);
+      } else {
+        setScheduleConfigState(getScheduleConfig());
+      }
+    };
+    window.addEventListener('admin-sync-schedule_config', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('admin-sync-schedule_config', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   const showToast = (msg = 'Configurações de horários e bloqueios salvas com sucesso!') => {
     setScheduleToast(msg);

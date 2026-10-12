@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Lock,
   LogOut,
@@ -29,6 +29,7 @@ import { AdminHorariosBloqueiosTab } from './admin/AdminHorariosBloqueiosTab';
 import { AdminDashboardTab } from './admin/AdminDashboardTab';
 import { AdminFolhaPagamentoTab } from './admin/AdminFolhaPagamentoTab';
 import { useClinicData } from '../data/clinicStore';
+import { safeStorage } from '../utils/safeStorage';
 import {
   getAppointments,
   getPendingAlertAppointment,
@@ -39,6 +40,7 @@ import {
   PENDING_ALERT_STORAGE_KEY
 } from '../data/bookingStore';
 import { Appointment } from '../types';
+import { alertSoundManager } from '../utils/alertSound';
 import { OnlineBookingAlertModal } from './user/OnlineBookingAlertModal';
 
 interface UserPortalProps {
@@ -58,7 +60,7 @@ export type UserTab =
   | 'folha'
   | 'relatorios';
 
-export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
+export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchToAdmin }) => {
   const clinic = useClinicData();
   const { isAuthenticated, login, logout } = useUserAuth();
 
@@ -76,25 +78,26 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
   // Alerta centralizado com som contínuo no Portal do Usuário (SÓ ativa em novo agendamento real)
   const [alertAppointment, setAlertAppointment] = useState<Appointment | null>(null);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const isAlertModalOpenRef = useRef(false);
+  isAlertModalOpenRef.current = isAlertModalOpen;
 
   // Estados de oscilação clicados pelo usuário conforme Tela 21
   const [hasClickedOnlineAlert, setHasClickedOnlineAlert] = useState(false);
 
   // Monitora agendamentos em tempo real via servidor (recebe alertas de celulares, tablets e outros computadores)
+  // Ativo enquanto o Portal do Usuário estiver aberto
   useEffect(() => {
-    if (!isAuthenticated) return;
-
     // Limpa alertas legados de demonstração para evitar qualquer toque involuntário
     try {
-      localStorage.removeItem('dra_leia_pending_alert_apt_id_v1');
-      localStorage.removeItem('dra_leia_pending_alert_apt_id_v2');
+      safeStorage.removeItem('dra_leia_pending_alert_apt_id_v1');
+      safeStorage.removeItem('dra_leia_pending_alert_apt_id_v2');
     } catch (_) {}
 
     // Sincroniza imediatamente com o servidor para carregar novos agendamentos feitos externamente
     syncAppointmentsWithServer().then((serverApts) => {
       setAppointments(serverApts);
       const pending = serverApts.find(a => a.status === 'pendente');
-      if (pending) {
+      if (pending && !isAlertModalOpenRef.current) {
         setAlertAppointment(pending);
       }
     }).catch(() => {});
@@ -103,10 +106,12 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
     const handleNewBooking = (e: Event) => {
       const customEvt = e as CustomEvent<Appointment>;
       if (customEvt.detail) {
-        setAlertAppointment(customEvt.detail);
-        setIsAlertModalOpen(true);
         setAppointments(getAppointments());
         setHasClickedOnlineAlert(false);
+        if (!isAlertModalOpenRef.current) {
+          setAlertAppointment(customEvt.detail);
+          setIsAlertModalOpen(true);
+        }
       }
     };
 
@@ -116,7 +121,7 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
       setAppointments(fresh);
       if (e.key === PENDING_ALERT_STORAGE_KEY && e.newValue) {
         const pending = getPendingAlertAppointment() || fresh.find(a => a.status === 'pendente');
-        if (pending) {
+        if (pending && !isAlertModalOpenRef.current) {
           setAlertAppointment(pending);
           setIsAlertModalOpen(true);
           setHasClickedOnlineAlert(false);
@@ -136,7 +141,11 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
 
     // Ouvinte de alerta silenciado
     const handleAlertSilenced = () => {
-      setIsAlertModalOpen(false);
+      // Para o som contínuo caso tenha sido silenciado
+      alertSoundManager.stopContinuousAlert();
+      // NUNCA fecha o modal automaticamente! A tela de confirmação e notificação
+      // deve permanecer parada na página (Portal do Usuário) para que a equipe
+      // possa notificar o novo paciente/aluno(a) sem interrupção.
       setAppointments(getAppointments());
     };
 
@@ -147,10 +156,12 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
 
     // Inicia monitoramento ativo do servidor para capturar cadastros vindos de celulares e outros dispositivos externos
     const stopCrossDevicePolling = startCrossDeviceAlertPolling((serverApt) => {
-      setAlertAppointment(serverApt);
-      setIsAlertModalOpen(true);
       setAppointments(getAppointments());
       setHasClickedOnlineAlert(false);
+      if (!isAlertModalOpenRef.current) {
+        setAlertAppointment(serverApt);
+        setIsAlertModalOpen(true);
+      }
     });
 
     return () => {
@@ -309,6 +320,32 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
             </button>
           </div>
         </div>
+
+        {/* Alerta Online enquanto o Portal do Usuário estiver aberto */}
+        <OnlineBookingAlertModal
+          isOpen={isAlertModalOpen}
+          appointment={alertAppointment}
+          onClose={() => {
+            setIsAlertModalOpen(false);
+            const closedId = alertAppointment?.id;
+            if (closedId) {
+              dismissPendingAlertAppointment(closedId);
+            }
+            const fresh = getAppointments();
+            setAppointments(fresh);
+            const nextPending = fresh.find(a => a.status === 'pendente' && a.id !== closedId);
+            if (nextPending) {
+              setTimeout(() => {
+                setAlertAppointment(nextPending);
+                setIsAlertModalOpen(true);
+              }, 300);
+            }
+          }}
+          onConfirmed={(updatedApt) => {
+            setAlertAppointment(updatedApt);
+            setAppointments(getAppointments());
+          }}
+        />
       </div>
     );
   }
@@ -591,10 +628,19 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite }) => {
         appointment={alertAppointment}
         onClose={() => {
           setIsAlertModalOpen(false);
-          if (alertAppointment?.id) {
-            dismissPendingAlertAppointment(alertAppointment.id);
+          const closedId = alertAppointment?.id;
+          if (closedId) {
+            dismissPendingAlertAppointment(closedId);
           }
-          setAppointments(getAppointments());
+          const fresh = getAppointments();
+          setAppointments(fresh);
+          const nextPending = fresh.find(a => a.status === 'pendente' && a.id !== closedId);
+          if (nextPending) {
+            setTimeout(() => {
+              setAlertAppointment(nextPending);
+              setIsAlertModalOpen(true);
+            }, 300);
+          }
         }}
         onConfirmed={(updatedApt) => {
           setAlertAppointment(updatedApt);

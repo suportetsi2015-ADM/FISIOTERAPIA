@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, ArrowUpRight, Phone, Calendar, Heart } from 'lucide-react';
+import { Menu, X, Phone, Calendar } from 'lucide-react';
 import { getWhatsAppUrl } from '../data/content';
 import { useClinicData } from '../data/clinicStore';
 
@@ -56,19 +56,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenBookingModal }) => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          {/* Logo / Brand */}
+          {/* Logo Oficial Transparente e Nome da Marca */}
           <a
             href="/"
             onClick={handleScrollToTop}
             id="brand-logo-link"
-            className="group flex flex-col items-start focus:outline-none rounded-sm"
+            className="group flex items-center gap-3 sm:gap-3.5 focus:outline-none rounded-sm"
           >
-            <span className="font-serif text-2xl sm:text-[1.65rem] tracking-tight font-semibold text-[#26161B] group-hover:text-[#D85072] transition-colors leading-none">
-              {clinic.name}
-            </span>
-            <span className="text-[11px] sm:text-xs font-medium tracking-wider uppercase text-[#8C3B50] mt-1">
-              Fisioterapia & Pilates
-            </span>
+            <img
+              src="/images/logo_transparente.png"
+              alt="Logo Oficial Dra. Léia Mar"
+              className="w-12 h-12 sm:w-14 sm:h-14 object-contain transition-transform group-hover:scale-105"
+            />
+            <div className="flex flex-col items-start">
+              <span className="font-serif text-2xl sm:text-[1.65rem] tracking-tight font-semibold text-[#26161B] group-hover:text-[#D85072] transition-colors leading-none">
+                {clinic.name}
+              </span>
+              <span className="text-[11px] sm:text-xs font-medium tracking-wider uppercase text-[#8C3B50] mt-1">
+                Fisioterapia & Pilates
+              </span>
+            </div>
           </a>
 
           {/* Desktop Navigation */}

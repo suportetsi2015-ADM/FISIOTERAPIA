@@ -25,6 +25,7 @@ import {
   dismissPendingAlertAppointment
 } from '../../data/bookingStore';
 import { Appointment, AppointmentStatus } from '../../types';
+import { formatPhoneBR } from '../../utils/phoneFormatter';
 
 interface AdminAgendaMarcacoesTabProps {
   isUserPortal?: boolean;
@@ -255,7 +256,7 @@ export const AdminAgendaMarcacoesTab: React.FC<AdminAgendaMarcacoesTabProps> = (
                       <div className="font-semibold text-[#26161B]">{apt.patientName}</div>
                       <div className="text-xs text-[#8C3B50] flex items-center gap-1 mt-0.5">
                         <Phone className="w-3 h-3" />
-                        <span>{apt.patientPhone}</span>
+                        <span>{formatPhoneBR(apt.patientPhone)}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
@@ -484,7 +485,7 @@ export const AdminAgendaMarcacoesTab: React.FC<AdminAgendaMarcacoesTabProps> = (
                     {filteredAppointments.map((apt, i) => (
                       <tr key={apt.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FFF8FA]'}>
                         <td className="p-2 border-b border-[#FCD6E0]/60 font-bold">{apt.patientName}</td>
-                        <td className="p-2 border-b border-[#FCD6E0]/60">{apt.patientPhone}</td>
+                        <td className="p-2 border-b border-[#FCD6E0]/60">{formatPhoneBR(apt.patientPhone)}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60">{new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60 font-semibold">{apt.timeSlot}</td>
                         <td className="p-2 border-b border-[#FCD6E0]/60">{apt.service}</td>

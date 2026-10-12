@@ -60,9 +60,27 @@ export function saveStoredPayrollAdjustments(adjustments: Record<string, Payroll
   try {
     localStorage.setItem(STORAGE_PAYROLL_ADJUSTMENTS, JSON.stringify(adjustments));
     window.dispatchEvent(new Event('dra_leia_payroll_updated'));
+    fetch('/api/payroll-adjustments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adjustments)
+    }).catch(() => {});
   } catch (e) {
     console.error('Erro ao salvar ajustes de folha:', e);
   }
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/payroll-adjustments')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res?.success && res.data && typeof res.data === 'object') {
+        localStorage.setItem(STORAGE_PAYROLL_ADJUSTMENTS, JSON.stringify(res.data));
+        window.dispatchEvent(new Event('dra_leia_payroll_updated'));
+      }
+    })
+    .catch(() => {});
 }
 
 /**

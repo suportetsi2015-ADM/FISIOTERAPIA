@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Appointment, ScheduleConfig } from '../types.ts';
+import { formatPhoneBR } from '../utils/phoneFormatter.ts';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const APPOINTMENTS_FILE = path.resolve(DATA_DIR, 'appointments.json');
@@ -90,7 +91,10 @@ export function loadAppointmentsFromDisk(): Appointment[] {
       const raw = fs.readFileSync(APPOINTMENTS_FILE, 'utf-8');
       const parsed: Appointment[] = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((apt) => ({
+          ...apt,
+          patientPhone: formatPhoneBR(apt.patientPhone)
+        }));
       }
     }
   } catch (e) {
@@ -98,14 +102,22 @@ export function loadAppointmentsFromDisk(): Appointment[] {
   }
 
   // Seed default if missing or invalid
-  saveAppointmentsToDisk(INITIAL_SEED_APPOINTMENTS);
-  return INITIAL_SEED_APPOINTMENTS;
+  const formattedSeeds = INITIAL_SEED_APPOINTMENTS.map(apt => ({
+    ...apt,
+    patientPhone: formatPhoneBR(apt.patientPhone)
+  }));
+  saveAppointmentsToDisk(formattedSeeds);
+  return formattedSeeds;
 }
 
 export function saveAppointmentsToDisk(apts: Appointment[]): void {
   ensureDataDir();
   try {
-    fs.writeFileSync(APPOINTMENTS_FILE, JSON.stringify(apts, null, 2), 'utf-8');
+    const formatted = apts.map(apt => ({
+      ...apt,
+      patientPhone: formatPhoneBR(apt.patientPhone)
+    }));
+    fs.writeFileSync(APPOINTMENTS_FILE, JSON.stringify(formatted, null, 2), 'utf-8');
   } catch (e) {
     console.error('[Server] Erro ao salvar appointments.json:', e);
   }
@@ -266,7 +278,7 @@ export async function handleAppointmentsApi(req: any, res: any): Promise<boolean
         const newApt: Appointment = {
           id: `APT-${Math.floor(1000 + Math.random() * 9000)}`,
           patientName: String(body.patientName).trim(),
-          patientPhone: String(body.patientPhone).trim(),
+          patientPhone: formatPhoneBR(String(body.patientPhone).trim()),
           patientEmail: body.patientEmail ? String(body.patientEmail).trim() : undefined,
           date: body.date || new Date().toISOString().split('T')[0],
           timeSlot: body.timeSlot || '09:00',
@@ -313,7 +325,11 @@ export async function handleAppointmentsApi(req: any, res: any): Promise<boolean
       let updatedApt: Appointment | null = null;
       const nextList: Appointment[] = appointments.map((a) => {
         if (a.id === id) {
-          const merged: Appointment = { ...a, ...body };
+          const merged: Appointment = {
+            ...a,
+            ...body,
+            ...(body.patientPhone ? { patientPhone: formatPhoneBR(body.patientPhone) } : {})
+          };
           updatedApt = merged;
           return merged;
         }

@@ -26,13 +26,13 @@ export interface FooterConfig {
 
 export const DEFAULT_FOOTER_CONFIG: FooterConfig = {
   brandTitle: 'Dra. Léia Mar',
-  brandSubtitle: 'Fisioterapia & Pilates • CREFITO 12345-F',
+  brandSubtitle: 'Fisioterapia & Pilates • CREFITO 426910-F',
   brandDescription:
     'Pilates personalizado com olhar fisioterapêutico especializado em Manaus. Atendimento exclusivo, acolhedor e individualizado para saúde da coluna, reabilitação, força profunda e qualidade de vida.',
   navTitle: 'Navegação',
   contactTitle: 'Estúdio & Contato',
   badgeText: '',
-  copyrightText: '© 2026 Dra. Léia Mar — Todos os direitos reservados. CREFITO 12345-F.',
+  copyrightText: '© 2026 Dra. Léia Mar — Todos os direitos reservados. CREFITO 426910-F.',
   privacyTitle: 'Política de Privacidade',
   privacyText:
     'Respeitamos a sua privacidade. Seus dados pessoais de contato e saúde compartilhados para agendamento de sessões de Pilates são confidenciais e utilizados estritamente para a prestação do serviço e contato direto da clínica.',
@@ -87,6 +87,13 @@ export function saveStoredFooterConfig(config: FooterConfig): void {
   try {
     localStorage.setItem(FOOTER_STORAGE_KEY, JSON.stringify(config));
     window.dispatchEvent(new Event('dra_leia_footer_updated'));
+    if (typeof window !== 'undefined') {
+      fetch('/api/footer-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      }).catch(() => {});
+    }
   } catch (e) {
     console.error('Erro ao salvar configuração do rodapé:', e);
   }
@@ -96,10 +103,26 @@ export function resetStoredFooterConfig(): FooterConfig {
   try {
     localStorage.removeItem(FOOTER_STORAGE_KEY);
     window.dispatchEvent(new Event('dra_leia_footer_updated'));
+    if (typeof window !== 'undefined') {
+      fetch('/api/footer-data', { method: 'DELETE' }).catch(() => {});
+    }
   } catch (e) {
     console.error('Erro ao resetar rodapé:', e);
   }
   return DEFAULT_FOOTER_CONFIG;
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/footer-data')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res?.success && res.data && typeof res.data === 'object') {
+        localStorage.setItem(FOOTER_STORAGE_KEY, JSON.stringify(res.data));
+        window.dispatchEvent(new Event('dra_leia_footer_updated'));
+      }
+    })
+    .catch(() => {});
 }
 
 export function useFooterData(): {
@@ -119,9 +142,11 @@ export function useFooterData(): {
     };
     window.addEventListener('dra_leia_footer_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('admin-sync-footer_data', handleUpdate);
     return () => {
       window.removeEventListener('dra_leia_footer_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('admin-sync-footer_data', handleUpdate);
     };
   }, []);
 

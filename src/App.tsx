@@ -20,15 +20,7 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { BookingModal } from './components/BookingModal';
 import { AdminPortal } from './components/AdminPortal';
 import { UserPortal } from './components/UserPortal';
-import { OnlineBookingAlertModal } from './components/user/OnlineBookingAlertModal';
-import { alertSoundManager } from './utils/alertSound';
-import {
-  startCrossDeviceAlertPolling,
-  getPendingAlertAppointment,
-  dismissPendingAlertAppointment
-} from './data/bookingStore';
-import { Appointment } from './types';
-import { Lock, ShieldCheck, Users, X, ArrowRight, Bell, Check } from 'lucide-react';
+import { Lock, ShieldCheck, Users, X, ArrowRight } from 'lucide-react';
 
 export type PortalType = 'admin' | 'usuario' | null;
 
@@ -92,43 +84,6 @@ export default function App() {
   const [activePortal, setActivePortal] = useState<PortalType>(checkActivePortalRoute);
   const [portalChoiceModalOpen, setPortalChoiceModalOpen] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
-
-  // Monitoramento contínuo global de novos cadastros externos (celulares, tablets, outros computadores)
-  const [globalAlertAppointment, setGlobalAlertAppointment] = useState<Appointment | null>(() => getPendingAlertAppointment());
-  const [isGlobalAlertOpen, setIsGlobalAlertOpen] = useState<boolean>(() => Boolean(getPendingAlertAppointment()));
-
-  // Monitora agendamentos em tempo real via servidor (recebe alertas de celulares, tablets e outros computadores em 2.5s)
-  useEffect(() => {
-    // 1. Inicia monitoramento contínuo ativo (SSE instantâneo + polling a cada 2.5 segundos)
-    const stopPolling = startCrossDeviceAlertPolling((newApt) => {
-      setGlobalAlertAppointment(newApt);
-      setIsGlobalAlertOpen(true);
-    });
-
-    // 2. Ouvinte local (mesma aba ou abas sincronizadas)
-    const handleNewOnlineBooking = (e: Event) => {
-      const customEvt = e as CustomEvent<Appointment>;
-      if (customEvt.detail) {
-        setGlobalAlertAppointment(customEvt.detail);
-        setIsGlobalAlertOpen(true);
-      }
-    };
-
-    // 3. Ouvinte de alerta silenciado
-    const handleAlertSilenced = () => {
-      setIsGlobalAlertOpen(false);
-      setGlobalAlertAppointment(null);
-    };
-
-    window.addEventListener('new-online-booking', handleNewOnlineBooking);
-    window.addEventListener('alert-silenced', handleAlertSilenced);
-
-    return () => {
-      stopPolling();
-      window.removeEventListener('new-online-booking', handleNewOnlineBooking);
-      window.removeEventListener('alert-silenced', handleAlertSilenced);
-    };
-  }, []);
 
   const handleSelectPortal = (portal: 'admin' | 'usuario') => {
     setPortalChoiceModalOpen(false);
@@ -241,10 +196,7 @@ export default function App() {
       {activePortal === 'admin' ? (
         <AdminPortal onBackToSite={handleReturnToSite} />
       ) : activePortal === 'usuario' ? (
-        <UserPortal
-          onBackToSite={handleReturnToSite}
-          onSwitchToAdmin={() => handleSelectPortal('admin')}
-        />
+        <UserPortal onBackToSite={handleReturnToSite} />
       ) : (
         <div id="landing-page-root" className="min-h-screen flex flex-col bg-[#FFFDFB] text-[#26161B] antialiased selection:bg-[#FFEBF0] selection:text-[#9C2744]">
       {/* 1. Header (Clean public navigation) */}
@@ -399,23 +351,6 @@ export default function App() {
         </div>
       )}
         </div>
-      )}
-
-      {/* MODAL GLOBAL DE ALERTA ONLINE: ATIVO NA LANDING PAGE E NO PAINEL ADMINISTRATIVO */}
-      {activePortal !== 'usuario' && (
-        <OnlineBookingAlertModal
-          isOpen={isGlobalAlertOpen}
-          appointment={globalAlertAppointment}
-          onClose={() => {
-            setIsGlobalAlertOpen(false);
-            if (globalAlertAppointment?.id) {
-              dismissPendingAlertAppointment(globalAlertAppointment.id);
-            }
-          }}
-          onConfirmed={(updatedApt) => {
-            setGlobalAlertAppointment(updatedApt);
-          }}
-        />
       )}
     </>
   );

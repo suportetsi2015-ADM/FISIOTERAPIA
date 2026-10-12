@@ -21,6 +21,13 @@ export function saveStoredStudioImages(images: StudioImage[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(images));
     window.dispatchEvent(new Event(STUDIO_GALLERY_CHANGED_EVENT));
+    if (typeof window !== 'undefined') {
+      fetch('/api/studio-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(images)
+      }).catch(() => {});
+    }
   } catch (error) {
     console.error('Erro ao salvar galeria do estúdio:', error);
     throw new Error('Não foi possível salvar as fotos. Reduza o tamanho ou a quantidade de imagens.');
@@ -62,9 +69,25 @@ export function resetStoredStudioImages(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(STUDIO_GALLERY_CHANGED_EVENT));
+    if (typeof window !== 'undefined') {
+      fetch('/api/studio-data', { method: 'DELETE' }).catch(() => {});
+    }
   } catch (error) {
     console.error('Erro ao restaurar galeria:', error);
   }
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/studio-data')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data));
+        window.dispatchEvent(new Event(STUDIO_GALLERY_CHANGED_EVENT));
+      }
+    })
+    .catch(() => {});
 }
 
 export function useStudioImages(): StudioImage[] {
@@ -76,9 +99,11 @@ export function useStudioImages(): StudioImage[] {
     };
     window.addEventListener(STUDIO_GALLERY_CHANGED_EVENT, handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('admin-sync-studio_data', handleUpdate);
     return () => {
       window.removeEventListener(STUDIO_GALLERY_CHANGED_EVENT, handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('admin-sync-studio_data', handleUpdate);
     };
   }, []);
 

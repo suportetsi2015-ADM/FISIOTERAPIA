@@ -42,6 +42,7 @@ class AlertSoundManager {
   public async unlockAudio(): Promise<boolean> {
     try {
       const ctx = this.getAudioContext();
+      if (!ctx) return false;
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
@@ -62,17 +63,23 @@ class AlertSoundManager {
     }
   }
 
-  private getAudioContext(): AudioContext {
-    if (!this.audioCtx || this.audioCtx.state === 'closed') {
-      const AudioContextClass =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.audioCtx = new AudioContextClass();
+  private getAudioContext(): AudioContext | null {
+    try {
+      if (!this.audioCtx || this.audioCtx.state === 'closed') {
+        const AudioContextClass =
+          (typeof window !== 'undefined' && (window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext));
+        if (AudioContextClass) {
+          this.audioCtx = new AudioContextClass();
+        }
+      }
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
+      }
+      return this.audioCtx;
+    } catch (_) {
+      return null;
     }
-    if (this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
-    }
-    return this.audioCtx;
   }
 
   /**
@@ -86,6 +93,7 @@ class AlertSoundManager {
   ) {
     try {
       const ctx = this.getAudioContext();
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
@@ -113,6 +121,10 @@ class AlertSoundManager {
   public playChimeCycle() {
     try {
       const ctx = this.getAudioContext();
+      if (!ctx) {
+        this.playFallbackBeep();
+        return;
+      }
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
@@ -178,6 +190,7 @@ class AlertSoundManager {
   public playSuccessChime() {
     try {
       const ctx = this.getAudioContext();
+      if (!ctx) return;
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }

@@ -31,6 +31,7 @@ import { useClinicalPatients, calculateAge } from '../../data/clinicalHistorySto
 import { getAppointments } from '../../data/bookingStore';
 import { useClinicData } from '../../data/clinicStore';
 import { calculateInstructorsPayroll, exportPayrollToPDF, exportPayrollToXLS } from '../../data/payrollStore';
+import { formatBRL } from '../../utils/currencyFormatter';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 

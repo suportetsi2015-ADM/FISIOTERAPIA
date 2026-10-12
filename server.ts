@@ -2,7 +2,8 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { handleAppointmentsApi } from './src/server/appointmentsApi';
+import { handleAppointmentsApi, broadcastSSE } from './src/server/appointmentsApi';
+import { handleAdminSyncApi } from './src/server/adminSyncApi';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,7 +60,9 @@ async function startServer() {
       }
       const buffer = Buffer.from(matches[2], 'base64');
       const filename =
-        type === 'principal' || type === 'studioHero' || type === 'hero'
+        type === 'logo'
+          ? 'logo.png'
+          : type === 'principal' || type === 'studioHero' || type === 'hero'
           ? 'dra_leia_principal.jpg'
           : 'dra_leia_sobre.jpg';
 
@@ -77,16 +80,24 @@ async function startServer() {
       fs.writeFileSync(path.resolve(publicDir, filename), buffer);
       fs.writeFileSync(path.resolve(assetsDir, filename), buffer);
 
+      const photoUrl = `/images/${filename}?t=${Date.now()}`;
+      broadcastSSE({
+        type: 'admin-config-updated',
+        entity: 'official_photo',
+        data: { type, url: photoUrl },
+        timestamp: Date.now()
+      });
+
       res.json({
         success: true,
-        url: `/images/${filename}?t=${Date.now()}`
+        url: photoUrl
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  // 4. Delegador para rotas de agendamentos e alertas em tempo real (/api/appointments, /api/health, /api/schedule-config)
+  // 4. Delegador para rotas de agendamentos, alertas e sincronização de configurações do Administrador em tempo real
   app.use(async (req, res, next) => {
     if (
       req.url.startsWith('/api/appointments') ||
@@ -97,9 +108,33 @@ async function startServer() {
         const handled = await handleAppointmentsApi(req, res);
         if (handled) return;
       } catch (err) {
-        console.error('[API Server] Erro ao processar rota:', err);
+        console.error('[API Server] Erro ao processar rota de agendamentos:', err);
         if (!res.headersSent) {
           res.status(500).json({ error: 'Erro interno ao processar agendamento' });
+        }
+        return;
+      }
+    }
+
+    // 4.1 Rotas de Sincronização em Tempo Real do Administrador (Multi-dispositivos)
+    if (
+      req.url.startsWith('/api/clinic-data') ||
+      req.url.startsWith('/api/schedule-config') ||
+      req.url.startsWith('/api/pilates-data') ||
+      req.url.startsWith('/api/clinical-patients') ||
+      req.url.startsWith('/api/payroll-adjustments') ||
+      req.url.startsWith('/api/faq-data') ||
+      req.url.startsWith('/api/footer-data') ||
+      req.url.startsWith('/api/studio-data') ||
+      req.url.startsWith('/api/auth-passwords')
+    ) {
+      try {
+        const handledAdmin = await handleAdminSyncApi(req, res);
+        if (handledAdmin) return;
+      } catch (err) {
+        console.error('[API Server] Erro ao processar sincronização de administrador:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Erro interno ao sincronizar configurações' });
         }
         return;
       }

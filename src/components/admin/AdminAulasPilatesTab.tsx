@@ -52,6 +52,7 @@ import {
   exportPilatesFinancialOnlyToPDF
 } from '../../data/pilatesClassesStore';
 import { CLINIC_INFO } from '../../data/content';
+import { formatPhoneBR } from '../../utils/phoneFormatter';
 
 export interface AdminAulasPilatesTabProps {
   portalSection?: 'aulas' | 'financeiro' | 'servicos' | 'profissionais' | 'relatorios';
@@ -1705,7 +1706,7 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
                             title="Conversar no WhatsApp"
                           >
                             <MessageCircle className="w-3 h-3" />
-                            <span>{rec.studentPhone}</span>
+                            <span>{formatPhoneBR(rec.studentPhone)}</span>
                           </a>
                         )}
                       </td>
@@ -2055,7 +2056,7 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
                             title="Conversar no WhatsApp"
                           >
                             <MessageCircle className="w-3 h-3" />
-                            <span>{rec.studentPhone}</span>
+                            <span>{formatPhoneBR(rec.studentPhone)}</span>
                           </a>
                         )}
                       </td>
@@ -2355,7 +2356,7 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
                           <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FFF8FA]'}>
                             <td className="p-2 border-b border-[#FCD6E0]/60 font-semibold">{c.professionalName}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60 font-bold">{c.studentName}</td>
-                            <td className="p-2 border-b border-[#FCD6E0]/60">{c.studentPhone || '-'}</td>
+                            <td className="p-2 border-b border-[#FCD6E0]/60">{c.studentPhone ? formatPhoneBR(c.studentPhone) : '-'}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60">{c.planType}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60 text-center">{c.startDate || '-'}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60 text-center font-bold text-[#9C2744] bg-[#FFEBF0]/50">
@@ -2496,7 +2497,7 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
                           <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FFF8FA]'}>
                             <td className="p-2 border-b border-[#FCD6E0]/60 font-semibold">{c.professionalName}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60 font-bold">{c.studentName}</td>
-                            <td className="p-2 border-b border-[#FCD6E0]/60">{c.studentPhone || '-'}</td>
+                            <td className="p-2 border-b border-[#FCD6E0]/60">{c.studentPhone ? formatPhoneBR(c.studentPhone) : '-'}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60">{c.planType}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60 text-right font-bold">{formatBRL(c.totalPlanValue)}</td>
                             <td className="p-2 border-b border-[#FCD6E0]/60 text-right">{formatBRL(c.monthlyInstallmentValue)}</td>

@@ -3,6 +3,7 @@ import { X, Send, Calendar, CheckCircle2, Shield, Bell, MessageCircle } from 'lu
 import { CLINIC_INFO, getWhatsAppUrl } from '../data/content';
 import { BookingFormData } from '../types';
 import { bookAppointment } from '../data/bookingStore';
+import { maskPhoneInput } from '../utils/phoneFormatter';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -97,19 +98,19 @@ ${formData.email ? `• E-mail: ${formData.email}\n` : ''}• Interesse principa
               Obrigado, <strong>{formData.name}</strong>! Seus dados foram recebidos com sucesso.
             </p>
 
-            {/* Aviso de Alerta Emitido na Plataforma */}
+            {/* Aviso de Agradecimento ao Paciente/Aluno */}
             <div className="bg-[#EBF7EE] border border-[#B6E3C3] rounded-2xl p-4 text-left mb-6 w-full text-xs text-[#1D7A46]">
               <div className="flex items-start gap-2.5">
-                <Bell className="w-4 h-4 text-[#1D7A46] mt-0.5 flex-shrink-0 animate-bounce" />
+                <CheckCircle2 className="w-4 h-4 text-[#1D7A46] mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-bold text-[#14532D]">
-                    ✓ Alerta Sonoro Ativado na Plataforma!
+                    ✓ Solicitação Registrada com Sucesso! Muito Obrigado!
                   </p>
                   <p className="text-[#2C6E49] mt-0.5">
-                    A recepção da Dra. Léia Mar já foi notificada em tempo real (alerta com som contínuo disparado em até 2,5 segundos).
+                    Agradecemos pela preferência, <strong>{formData.name}</strong>! Seus dados foram encaminhados com sucesso para a equipe da Dra. Léia Mar no Portal do Usuário, e entraremos em contato.
                   </p>
                   <p className="text-[11px] text-[#3B6C4F] mt-1.5 bg-white/80 p-2 rounded-lg border border-[#B6E3C3]">
-                    📌 O envio da mensagem pelo WhatsApp abaixo é <strong>100% opcional</strong>. O alerta na plataforma <strong>não depende</strong> do seu envio e já está funcionando!
+                    📌 O envio da mensagem pelo WhatsApp abaixo é <strong>opcional</strong> para seu acompanhamento direto.
                   </p>
                 </div>
               </div>
@@ -173,9 +174,9 @@ ${formData.email ? `• E-mail: ${formData.email}\n` : ''}• Interesse principa
                   <input
                     type="tel"
                     required
-                    placeholder="(11) 99999-9999"
+                    placeholder="(92) 98104-5023"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: maskPhoneInput(e.target.value) })}
                     className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#D8CEBF] text-sm text-[#1E2421] placeholder-[#838E88] focus:outline-none focus:ring-2 focus:ring-[#5F7161]"
                   />
                 </div>

@@ -440,9 +440,27 @@ export function saveStoredClinicalPatients(patients: ClinicalPatient[]): void {
   try {
     localStorage.setItem(CLINICAL_STORAGE_KEY, JSON.stringify(patients));
     window.dispatchEvent(new Event('clinical_patients_updated'));
+    fetch('/api/clinical-patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patients)
+    }).catch(() => {});
   } catch (err) {
     console.error('Erro ao salvar pacientes no localStorage:', err);
   }
+}
+
+// Sincronização inicial com o servidor
+if (typeof window !== 'undefined') {
+  fetch('/api/clinical-patients')
+    .then((r) => r.json())
+    .then((res) => {
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+        localStorage.setItem(CLINICAL_STORAGE_KEY, JSON.stringify(res.data));
+        window.dispatchEvent(new Event('clinical_patients_updated'));
+      }
+    })
+    .catch(() => {});
 }
 
 export function useClinicalPatients() {
@@ -454,9 +472,11 @@ export function useClinicalPatients() {
     };
     window.addEventListener('clinical_patients_updated', sync);
     window.addEventListener('storage', sync);
+    window.addEventListener('admin-sync-clinical_patients', sync);
     return () => {
       window.removeEventListener('clinical_patients_updated', sync);
       window.removeEventListener('storage', sync);
+      window.removeEventListener('admin-sync-clinical_patients', sync);
     };
   }, []);
 

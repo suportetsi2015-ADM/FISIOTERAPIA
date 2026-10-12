@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="roseGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D85072" />
+      <stop offset="50%" stop-color="#BC3859" />
+      <stop offset="100%" stop-color="#9C2744" />
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4AF37" />
+      <stop offset="50%" stop-color="#F3E5AB" />
+      <stop offset="100%" stop-color="#C59B27" />
+    </linearGradient>
+    <linearGradient id="subtlePetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEBF0" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#FCD6E0" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Soft Aura Circle -->
+  <circle cx="200" cy="200" r="185" fill="none" stroke="url(#roseGoldGrad)" stroke-width="1.5" stroke-opacity="0.3" stroke-dasharray="4 4" />
+  <circle cx="200" cy="200" r="176" fill="url(#subtlePetal)" />
+  <circle cx="200" cy="200" r="172" fill="none" stroke="url(#roseGoldGrad)" stroke-width="2.5" />
+
+  <!-- Inner Delicate Concentric Ring -->
+  <circle cx="200" cy="200" r="148" fill="none" stroke="url(#goldAccent)" stroke-width="1" stroke-opacity="0.75" />
+
+  <!-- Decorative Botanical & Spine Alignment Sparks (Points of Alignment) -->
+  <circle cx="200" cy="40" r="3" fill="#D4AF37" />
+  <circle cx="200" cy="360" r="3" fill="#D4AF37" />
+  <circle cx="40" cy="200" r="3" fill="#D4AF37" />
+  <circle cx="360" cy="200" r="3" fill="#D4AF37" />
+
+  <!-- Pilates Arc / Spine Fluid Curve (Harmonic Anatomy Ribbon) -->
+  <path d="M 125 240 C 120 160, 160 110, 200 110 C 240 110, 280 160, 275 240 C 270 295, 235 305, 200 305 C 165 305, 130 295, 125 240 Z" 
+        fill="none" 
+        stroke="url(#roseGoldGrad)" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Continuous Fluid Infinity / Cadence Path representing Pilates Reformer Movement -->
+  <path d="M 140 210 C 150 145, 185 130, 200 165 C 215 130, 250 145, 260 210 C 270 260, 215 275, 200 240 C 185 275, 130 260, 140 210 Z"
+        fill="none"
+        stroke="url(#goldAccent)"
+        stroke-width="1.8"
+        stroke-linecap="round" />
+
+  <!-- Intertwined Monogram: 'L' and 'M' in Luxury Classical Calligraphic Geometry -->
+  <!-- 'L' Stem & Base -->
+  <path d="M 172 135 C 172 145, 170 215, 170 238 C 170 248, 175 252, 192 252 C 205 252, 215 250, 224 246" 
+        fill="none" 
+        stroke="url(#roseGoldGrad)" 
+        stroke-width="5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- 'M' Classical Arch Form -->
+  <path d="M 195 242 L 205 148 L 222 210 L 238 148 L 248 242" 
+        fill="none" 
+        stroke="#26161B" 
+        stroke-width="4" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Posture / Biomechanical Alignment Nodes (Spinal Harmony) -->
+  <circle cx="200" cy="115" r="4.5" fill="url(#goldAccent)" />
+  <circle cx="200" cy="142" r="3" fill="#BC3859" />
+  <circle cx="200" cy="170" r="3" fill="#BC3859" />
+  <circle cx="200" cy="198" r="3" fill="#BC3859" />
+  <circle cx="200" cy="226" r="3" fill="#BC3859" />
+  <circle cx="200" cy="285" r="4" fill="url(#goldAccent)" />
+
+  <!-- Subtle Diamond Crown Finial -->
+  <polygon points="200,92 205,98 200,104 195,98" fill="url(#goldAccent)" />
+</svg>

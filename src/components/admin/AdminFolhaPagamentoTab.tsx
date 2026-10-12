@@ -70,6 +70,22 @@ export const AdminFolhaPagamentoTab: React.FC<AdminFolhaPagamentoTabProps> = ({ 
   const [isVisualFolhaOpen, setIsVisualFolhaOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [payrollSyncKey, setPayrollSyncKey] = useState(0);
+
+  // Sincroniza alterações e marcações da folha em tempo real entre celulares e computadores
+  useEffect(() => {
+    const handleSync = () => {
+      setPayrollSyncKey(k => k + 1);
+    };
+    window.addEventListener('dra_leia_payroll_updated', handleSync);
+    window.addEventListener('admin-sync-payroll_adjustments', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('dra_leia_payroll_updated', handleSync);
+      window.removeEventListener('admin-sync-payroll_adjustments', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);

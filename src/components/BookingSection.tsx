@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle2, User, Phone, Sparkles, MessageCircle, ArrowRight, ShieldCheck, Heart, Bell } from 'lucide-react';
 import { CLINIC_INFO, getWhatsAppUrl } from '../data/content';
+import { formatPhoneBR, maskPhoneInput } from '../utils/phoneFormatter';
 import {
   getScheduleConfig,
   getAppointments,
@@ -68,9 +69,32 @@ export const BookingSection: React.FC = () => {
 
     // Auto-select first available day
     const firstValid = daysList.find((d) => d.isAvailable);
-    if (firstValid && !selectedDate) {
+    if (firstValid && (!selectedDate || !daysList.some(d => d.dateStr === selectedDate && d.isAvailable))) {
       setSelectedDate(firstValid.dateStr);
     }
+  }, [config]);
+
+  // Sincroniza em tempo real configurações e bloqueios feitos pelo Administrador
+  useEffect(() => {
+    const handleScheduleSync = (e: Event) => {
+      const customEvt = e as CustomEvent<ScheduleConfig>;
+      if (customEvt.detail) {
+        setConfig(customEvt.detail);
+      } else {
+        setConfig(getScheduleConfig());
+      }
+    };
+    const handleAptsSync = () => {
+      setAppointments(getAppointments());
+    };
+    window.addEventListener('admin-sync-schedule_config', handleScheduleSync);
+    window.addEventListener('appointments-synced', handleAptsSync);
+    window.addEventListener('storage', handleAptsSync);
+    return () => {
+      window.removeEventListener('admin-sync-schedule_config', handleScheduleSync);
+      window.removeEventListener('appointments-synced', handleAptsSync);
+      window.removeEventListener('storage', handleAptsSync);
+    };
   }, []);
 
   // Compute available slots for currently selected date
@@ -185,28 +209,36 @@ export const BookingSection: React.FC = () => {
                 </div>
                 <div className="flex justify-between pt-1">
                   <span className="text-[#7A2134] font-medium">Seu Telefone:</span>
-                  <span className="font-semibold">{confirmedAppointment.patientPhone}</span>
+                  <span className="font-semibold">{formatPhoneBR(confirmedAppointment.patientPhone)}</span>
                 </div>
               </div>
 
-              {/* Quadro Informativo: Alerta Emitido em Tempo Real na Plataforma */}
-              <div className="bg-[#EBF7EE] border border-[#B6E3C3] rounded-2xl p-5 text-left mb-8 shadow-xs text-xs sm:text-sm text-[#1D7A46]">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#D1F0DB] flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bell className="w-4 h-4 text-[#1D7A46] animate-bounce" />
+              {/* Quadro Oficial Conforme Modelo Tela 24: CADASTRO CONFIRMADO COM SUCESSO! */}
+              <div className="bg-[#EAF7EE] border-2 border-[#86EFAC] rounded-3xl p-6 sm:p-7 text-center mb-8 shadow-xs text-[#166534]">
+                {/* Cabeçalho com Ícone de Confirmação Radiante */}
+                <div className="flex items-center justify-center gap-2.5 mb-3.5">
+                  <div className="w-8 h-8 rounded-full bg-[#16A34A] text-white flex items-center justify-center shadow-xs shrink-0 ring-4 ring-[#DCFCE7]">
+                    <CheckCircle2 className="w-5 h-5 text-white" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-[#14532D] text-sm">
-                      ✓ Alerta em Tempo Real Disparado na Plataforma da Clínica!
-                    </p>
-                    <p className="text-[#2C6E49] leading-relaxed">
-                      Seu cadastro foi transmitido e o <strong>alerta sonoro contínuo já está tocando na plataforma</strong> da recepção da Dra. Léia Mar (acionamento automático em até 2,5 segundos).
-                    </p>
-                    <div className="mt-2.5 p-2.5 rounded-xl bg-white/85 border border-[#B6E3C3] text-[11px] text-[#2C6E49] leading-relaxed">
-                      📌 <strong>Aviso Importante:</strong> O envio do comprovante abaixo via WhatsApp é <strong>100% opcional</strong> para seu acompanhamento pessoal. <strong>O alerta na plataforma NÃO depende do envio da mensagem no WhatsApp</strong> para tocar e ser visualizado pela equipe!
-                    </div>
-                  </div>
+                  <h4 className="font-serif text-lg sm:text-xl font-bold tracking-tight text-[#14532D]">
+                    CADASTRO CONFIRMADO COM SUCESSO!
+                  </h4>
                 </div>
+
+                <p className="text-xs sm:text-sm text-[#166534] leading-relaxed max-w-xl mx-auto mb-4">
+                  Seu cadastro foi recebido e a equipe da <strong>Dra. Léia Mar – Fisioterapia & Pilates</strong> já conta com a sinalização correspondente para acompanhamento do seu atendimento. 💚
+                </p>
+
+                {/* Card Interno Importante (WhatsApp Opcional) */}
+                <div className="bg-white/95 border border-[#86EFAC] rounded-2xl p-4 text-left text-xs sm:text-[13px] text-[#14532D] leading-relaxed shadow-2xs mb-4">
+                  <p>
+                    <strong>📌 Importante:</strong> O envio do comprovante abaixo pelo WhatsApp é <strong>opcional</strong> e serve apenas para seu controle pessoal. Você não precisa enviar essa mensagem para que seu cadastro seja considerado recebido pela clínica.
+                  </p>
+                </div>
+
+                <p className="text-xs sm:text-sm font-semibold text-[#14532D]">
+                  Agradecemos pela confiança! Estamos à disposição para melhor atender você. 🤝
+                </p>
               </div>
 
               {/* Action Buttons */}
@@ -412,9 +444,9 @@ export const BookingSection: React.FC = () => {
                       <input
                         type="tel"
                         required
-                        placeholder="(92) 99999-9999"
+                        placeholder="(92) 98104-5023"
                         value={patientPhone}
-                        onChange={(e) => setPatientPhone(e.target.value)}
+                        onChange={(e) => setPatientPhone(maskPhoneInput(e.target.value))}
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E4D3CA] text-sm text-[#26161B] placeholder-[#A8928B] focus:outline-none focus:ring-2 focus:ring-[#D85072]"
                       />
                     </div>

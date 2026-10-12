@@ -71,12 +71,23 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
           
           {/* Col 1: Brand & Credentials (5 cols) */}
           <div className="lg:col-span-5">
-            <h3 className="font-serif text-2xl sm:text-3xl text-white font-semibold mb-2">
-              {footer.brandTitle || clinic.name}
-            </h3>
-            <p className="text-xs uppercase tracking-widest text-[#FFB3C6] font-semibold mb-4">
-              {footer.brandSubtitle || `Fisioterapia & Pilates • CREFITO ${clinic.crefito}`}
-            </p>
+            <div className="flex items-center gap-3.5 mb-3">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/95 p-1 flex items-center justify-center shadow-md">
+                <img
+                  src="/images/logo_transparente.png"
+                  alt="Logo Oficial Dra. Léia Mar"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div>
+                <h3 className="font-serif text-2xl sm:text-3xl text-white font-semibold leading-none">
+                  {footer.brandTitle || clinic.name}
+                </h3>
+                <p className="text-xs uppercase tracking-widest text-[#FFB3C6] font-semibold mt-1">
+                  {footer.brandSubtitle || `Fisioterapia & Pilates • CREFITO ${clinic.crefito}`}
+                </p>
+              </div>
+            </div>
             <p className="text-sm text-[#DFBAC6] leading-relaxed max-w-md mb-6 font-light">
               {footer.brandDescription ||
                 'Pilates personalizado com olhar fisioterapêutico especializado em Manaus. Atendimento exclusivo, acolhedor e individualizado para saúde da coluna, reabilitação, força profunda e qualidade de vida.'}
