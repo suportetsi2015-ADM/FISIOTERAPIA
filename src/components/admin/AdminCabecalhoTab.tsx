@@ -119,7 +119,7 @@ export const AdminCabecalhoTab: React.FC = () => {
       logoUrl: DEFAULT_HEADER_CONFIG.logoUrl,
       logoHeight: DEFAULT_HEADER_CONFIG.logoHeight,
       showLogo: true,
-      logoBackground: 'transparent'
+      logoBackground: 'transparent' as const
     };
     setFormData(updated);
     updateConfig({

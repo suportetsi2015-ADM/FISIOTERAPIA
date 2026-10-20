@@ -41,7 +41,8 @@ import {
   UserPlus,
   DollarSign,
   BarChart3,
-  Banknote
+  Banknote,
+  Sliders
 } from 'lucide-react';
 import { useAdminAuth } from '../data/adminAuthStore';
 import { setUserPassword } from '../data/userAuthStore';
@@ -70,12 +71,6 @@ import { AdminLocalizacaoTab } from './admin/AdminLocalizacaoTab';
 import { AdminFaqTab } from './admin/AdminFaqTab';
 import { AdminCabecalhoTab } from './admin/AdminCabecalhoTab';
 import { AdminRodapeTab } from './admin/AdminRodapeTab';
-import { AdminAulasPilatesTab } from './admin/AdminAulasPilatesTab';
-import { AdminHistoricoClinicoTab } from './admin/AdminHistoricoClinicoTab';
-import { AdminAgendaMarcacoesTab } from './admin/AdminAgendaMarcacoesTab';
-import { AdminHorariosBloqueiosTab } from './admin/AdminHorariosBloqueiosTab';
-import { AdminDashboardTab } from './admin/AdminDashboardTab';
-import { AdminFolhaPagamentoTab } from './admin/AdminFolhaPagamentoTab';
 import { AdminOfficialPhotoSyncModal } from './admin/AdminOfficialPhotoSyncModal';
 
 interface AdminPortalProps {
@@ -88,17 +83,8 @@ export type AdminTab =
   | 'sobre'
   | 'espaco'
   | 'localizacao'
-  | 'aulas'
-  | 'financeiro'
-  | 'folha'
-  | 'dashboard'
-  | 'servicos'
-  | 'profissionais'
-  | 'historico'
   | 'faq'
   | 'rodape'
-  | 'appointments'
-  | 'schedule'
   | 'security';
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
@@ -488,15 +474,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
                 <span className="md:hidden">Fotos</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab('dashboard')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#9C2744] bg-[#FFEBF0] hover:bg-[#FCD6E0] border border-[#FCD6E0] transition-colors cursor-pointer shadow-2xs"
-                title="DASHBOARD: Indicadores & Gráficos PowerBI"
-              >
-                <BarChart3 className="w-4 h-4 text-[#9C2744]" />
-                <span>DASHBOARD</span>
-              </button>
 
               <button
                 onClick={onBackToSite}
@@ -581,90 +558,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
             </button>
 
             <button
-              onClick={() => setActiveTab('aulas')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'aulas'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <Award className="w-4 h-4" />
-              <span>Aulas de Pilates</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('financeiro')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'financeiro'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <DollarSign className="w-4 h-4" />
-              <span>Gestão Financeira</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('folha')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'folha'
-                  ? 'bg-[#D85072] text-white shadow-xs font-bold'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <Banknote className="w-4 h-4" />
-              <span>Folha de Pagamento</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'dashboard'
-                  ? 'bg-[#9C2744] text-white shadow-xs font-bold'
-                  : 'text-[#9C2744] bg-[#FFEBF0]/70 hover:bg-[#FFEBF0] border border-[#FCD6E0]'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4 text-[#9C2744]" />
-              <span>DASHBOARD</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('servicos')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'servicos'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <Tag className="w-4 h-4" />
-              <span>Tabela de Serviços e Planos</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('profissionais')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'profissionais'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Cadastro de Profissionais</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('historico')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'historico'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <Stethoscope className="w-4 h-4" />
-              <span>Histórico Clínico</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('faq')}
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'faq'
@@ -680,41 +573,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
               onClick={() => setActiveTab('rodape')}
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'rodape'
-                  ? 'bg-[#D85072] text-white shadow-xs'
+                  ? 'bg-[#D85072] text-white shadow-xs font-bold'
                   : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
               }`}
             >
               <Share2 className="w-4 h-4" />
-              <span>Rodapé & Ícones</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('appointments')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'appointments'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Agenda & Marcações</span>
-              {pendingCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-[#D85072] text-white text-[10px] flex items-center justify-center font-bold">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('schedule')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'schedule'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              <span>Horários & Bloqueios</span>
+              <span>Rodapé & Logo</span>
             </button>
 
             <button
@@ -775,39 +639,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
           />
         )}
 
-        {/* =================================================================== */}
-        {/* TAB 5: ABA AULAS DE PILATES, FINANCEIRO, SERVIÇOS E PROFISSIONAIS */}
-        {/* =================================================================== */}
-        {(activeTab === 'aulas' ||
-          activeTab === 'financeiro' ||
-          activeTab === 'servicos' ||
-          activeTab === 'profissionais') && (
-          <AdminAulasPilatesTab
-            portalSection={activeTab}
-            initialSubView={activeTab === 'servicos' ? 'servicos' : 'geral'}
-          />
-        )}
-
-        {/* =================================================================== */}
-        {/* TAB FOLHA DE PAGAMENTO (COLETAR TODAS AS AULAS PRESTADAS, DIAS, HORAS E VALORES) */}
-        {/* =================================================================== */}
-        {activeTab === 'folha' && (
-          <AdminFolhaPagamentoTab isUserPortal={false} />
-        )}
-
-        {/* =================================================================== */}
-        {/* TAB DASHBOARD ANALYTICS (POWERBI COM GRÁFICOS DE TODAS AS CATEGORIAS) */}
-        {/* =================================================================== */}
-        {activeTab === 'dashboard' && (
-          <AdminDashboardTab />
-        )}
-
-        {/* =================================================================== */}
-        {/* TAB HISTÓRICO CLÍNICO & SECRETÁRIA (CADASTRO GERAL & DECLARAÇÕES)   */}
-        {/* =================================================================== */}
-        {activeTab === 'historico' && (
-          <AdminHistoricoClinicoTab />
-        )}
 
         {/* =================================================================== */}
         {/* TAB 6: ABA PERGUNTAS & RESPOSTAS (FAQ DA DRA. LÉIA MAR)             */}
@@ -817,25 +648,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
         )}
 
         {/* =================================================================== */}
-        {/* TAB 7: ABA RODAPÉ & ÍCONES (TEXTOS, REDES SOCIAIS E LINKS)          */}
+        {/* TAB CABEÇALHO & LOGO (INSERIR, ALTERAR, MODIFICAR, EDITAR, EXCLUIR) */}
+        {/* =================================================================== */}
+        {activeTab === 'cabecalho' && (
+          <AdminCabecalhoTab />
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 7: ABA RODAPÉ & LOGO (TEXTOS, REDES SOCIAIS E LINKS)            */}
         {/* =================================================================== */}
         {activeTab === 'rodape' && (
           <AdminRodapeTab />
         )}
 
-        {/* =================================================================== */}
-        {/* TAB 3: AGENDA & MARCAÇÕES DE AULAS                                */}
-        {/* =================================================================== */}
-        {activeTab === 'appointments' && (
-          <AdminAgendaMarcacoesTab isUserPortal={false} />
-        )}
-
-        {/* =================================================================== */}
-        {/* TAB 4: HORÁRIOS & BLOQUEIOS DA AGENDA                              */}
-        {/* =================================================================== */}
-        {activeTab === 'schedule' && (
-          <AdminHorariosBloqueiosTab isUserPortal={false} />
-        )}
 
         {/* =================================================================== */}
         {/* TAB 5: SEGURANÇA & SENHA DE ACESSO INDIVIDUAL                      */}

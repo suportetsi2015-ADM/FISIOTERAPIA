@@ -158,7 +158,7 @@ export const AdminRodapeTab: React.FC = () => {
       logoUrl: DEFAULT_FOOTER_CONFIG.logoUrl,
       logoHeight: DEFAULT_FOOTER_CONFIG.logoHeight,
       showLogo: true,
-      logoBackground: 'transparent'
+      logoBackground: 'transparent' as const
     };
     setFormData(updated);
     updateConfig({
