@@ -72,13 +72,23 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
           {/* Col 1: Brand & Credentials (5 cols) */}
           <div className="lg:col-span-5">
             <div className="flex items-center gap-3.5 mb-3">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/95 p-1 flex items-center justify-center shadow-md">
-                <img
-                  src="/images/logo_transparente.png"
-                  alt="Logo Oficial Dra. Léia Mar"
-                  className="w-full h-full object-contain"
-                />
-              </div>
+              {footer.showLogo && (footer.logoUrl || '/images/logo_transparente.png') && (
+                <div
+                  style={{
+                    height: `${footer.logoHeight || 56}px`,
+                    width: `${footer.logoHeight || 56}px`
+                  }}
+                  className={`flex items-center justify-center shrink-0 ${
+                    footer.logoBackground === 'white' ? 'bg-white p-1 rounded-full' : ''
+                  }`}
+                >
+                  <img
+                    src={footer.logoUrl || '/images/logo_transparente.png'}
+                    alt={footer.brandTitle || clinic.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
               <div>
                 <h3 className="font-serif text-2xl sm:text-3xl text-white font-semibold leading-none">
                   {footer.brandTitle || clinic.name}
@@ -86,6 +96,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
                 <p className="text-xs uppercase tracking-widest text-[#FFB3C6] font-semibold mt-1">
                   {footer.brandSubtitle || `Fisioterapia & Pilates • CREFITO ${clinic.crefito}`}
                 </p>
+                {footer.showCnpj && (
+                  <p className="text-xs text-[#DFBAC6] font-medium mt-1">
+                    {footer.cnpj || '69.533.975/0001-81'} - {footer.companyLegalName || 'MOVEX CENTRO DE MOVIMENTO E PERFORMANCE'}
+                  </p>
+                )}
               </div>
             </div>
             <p className="text-sm text-[#DFBAC6] leading-relaxed max-w-md mb-6 font-light">
@@ -117,48 +132,39 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
               {footer.navTitle || 'Navegação'}
             </h4>
             <ul className="space-y-2.5 text-sm text-[#DFBAC6] font-light">
-              <li>
-                <a
-                  href="/"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    if (window.location.hash) {
-                      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-                    }
-                  }}
-                  className="hover:text-white transition-colors"
-                >
-                  Início
-                </a>
-              </li>
-              <li>
-                <a href="#agendamento" className="hover:text-[#FF8DA7] transition-colors font-medium flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-[#D85072]" />
-                  <span>Agendamento Online</span>
-                </a>
-              </li>
-              <li>
-                <a href="#pilates" className="hover:text-white transition-colors">Pilates com Propósito</a>
-              </li>
-              <li>
-                <a href="#beneficios" className="hover:text-white transition-colors">Benefícios</a>
-              </li>
-              <li>
-                <a href="#sobre" className="hover:text-white transition-colors">Sobre a Dra. Léia</a>
-              </li>
-              <li>
-                <a href="#metodo" className="hover:text-white transition-colors">Método & Fases</a>
-              </li>
-              <li>
-                <a href="#espaco" className="hover:text-white transition-colors">Nosso Estúdio</a>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-white transition-colors">Dúvidas Frequentes</a>
-              </li>
-              <li>
-                <a href="#localizacao" className="hover:text-white transition-colors">Localização em Manaus</a>
-              </li>
+              {(footer.navLinks && footer.navLinks.length > 0
+                ? footer.navLinks.filter(item => item.active !== false)
+                : [
+                    { id: 'fnav-1', label: 'Início', href: '/' },
+                    { id: 'fnav-2', label: 'Agendamento Online', href: '#agendamento' },
+                    { id: 'fnav-3', label: 'Pilates com Propósito', href: '#pilates' },
+                    { id: 'fnav-4', label: 'Benefícios', href: '#beneficios' },
+                    { id: 'fnav-5', label: 'Sobre a Dra. Léia', href: '#sobre' },
+                    { id: 'fnav-6', label: 'Método & Fases', href: '#metodo' },
+                    { id: 'fnav-7', label: 'Nosso Estúdio', href: '#espaco' },
+                    { id: 'fnav-8', label: 'Dúvidas Frequentes', href: '#faq' },
+                    { id: 'fnav-9', label: 'Localização em Manaus', href: '#localizacao' }
+                  ]
+              ).map((item) => (
+                <li key={item.id || item.label}>
+                  <a
+                    href={item.href}
+                    onClick={item.href === '/' ? (e) => {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      if (window.location.hash) {
+                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                      }
+                    } : undefined}
+                    className={`transition-colors flex items-center gap-1.5 ${
+                      item.href === '#agendamento' ? 'hover:text-[#FF8DA7] font-medium text-[#F9ECEF]' : 'hover:text-white'
+                    }`}
+                  >
+                    {item.href === '#agendamento' && <Calendar className="w-3.5 h-3.5 text-[#D85072]" />}
+                    <span>{item.label}</span>
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -169,17 +175,27 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
             </h4>
             <div className="space-y-3 text-sm text-[#DFBAC6] font-light">
               <p>
-                <strong className="font-semibold text-white">Endereço:</strong> {clinic.address}
+                <strong className="font-semibold text-white">Endereço:</strong> {footer.contactAddress || clinic.address}
               </p>
               <p>
-                <strong className="font-semibold text-white">Referência:</strong> {clinic.landmarks}
+                <strong className="font-semibold text-white">Referência:</strong> {footer.contactLandmarks || clinic.landmarks}
               </p>
               <p>
-                <strong className="font-semibold text-white">Bairro:</strong> {clinic.neighborhood} — {clinic.cityState}
+                <strong className="font-semibold text-white">Bairro:</strong> {footer.contactNeighborhood || clinic.neighborhood} — {footer.contactCityState || clinic.cityState}
               </p>
               <p>
-                <strong className="font-semibold text-white">WhatsApp:</strong> {clinic.phoneDisplay}
+                <strong className="font-semibold text-white">WhatsApp:</strong> {footer.contactPhone || clinic.phoneDisplay}
               </p>
+              {footer.showCnpj && (
+                <>
+                  <p>
+                    <strong className="font-semibold text-white">CNPJ:</strong> {footer.cnpj || '69.533.975/0001-81'}
+                  </p>
+                  <p className="text-xs text-[#DFBAC6]/90">
+                    {footer.companyLegalName || 'MOVEX CENTRO DE MOVIMENTO E PERFORMANCE'}
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -187,7 +203,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
 
         {/* Bottom copyright & legal */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#A8828F] gap-4">
-          <p>{footer.copyrightText || `© 2026 ${clinic.name} — Todos os direitos reservados. CREFITO ${clinic.crefito}.`}</p>
+          <div className="space-y-1 text-center sm:text-left">
+            <p>{footer.copyrightText || `© 2026 ${clinic.name} — Todos os direitos reservados. CNPJ: 69.533.975/0001-81 - MOVEX CENTRO DE MOVIMENTO E PERFORMANCE • CREFITO ${clinic.crefito}.`}</p>
+            <p className="text-[11px] text-[#DFBAC6]/80 font-medium">
+              Dra. Léia Mar • 69.533.975/0001-81 - MOVEX CENTRO DE MOVIMENTO E PERFORMANCE
+            </p>
+          </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
             <button

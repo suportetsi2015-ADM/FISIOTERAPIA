@@ -34,6 +34,7 @@ import { calculateInstructorsPayroll, exportPayrollToPDF, exportPayrollToXLS } f
 import { formatBRL } from '../../utils/currencyFormatter';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface AdminDashboardTabProps {
   isUserPortal?: boolean;
@@ -229,23 +230,231 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
   };
 
   // ==========================================================================
-  // DOWNLOAD CHART DATA AS CSV FUNCTION
+  // DOWNLOAD CHART DATA AS XLS FUNCTION (EXCEL)
   // ==========================================================================
-  const downloadChartDataCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
-    const csvContent =
-      '\uFEFF' +
-      [headers.join(';'), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';'))].join('\r\n');
+  const downloadChartDataXLS = (
+    chartTitle: string,
+    filename: string,
+    headers: string[],
+    rows: (string | number)[][]
+  ) => {
+    try {
+      const dataObjects = rows.map((r) => {
+        const obj: Record<string, string | number> = {};
+        headers.forEach((h, i) => {
+          obj[h] = r[i] !== undefined ? r[i] : '';
+        });
+        return obj;
+      });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showToast('Dados do gráfico baixados em CSV com sucesso!');
+      const ws = XLSX.utils.json_to_sheet(dataObjects);
+      ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 18) }));
+
+      const wb = XLSX.utils.book_new();
+      const safeSheetName = chartTitle.substring(0, 31).replace(/[\\/?*[\]]/g, '_');
+      XLSX.utils.book_append_sheet(wb, ws, safeSheetName || 'Dados');
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const cleanFilename = filename.replace(/[^a-zA-Z0-9_]/g, '_');
+      XLSX.writeFile(wb, `Grafico_${cleanFilename}_Dra_Leia_Mar_${todayStr}.xlsx`);
+      showToast(`Relatório do gráfico "${chartTitle}" baixado em XLS (.xlsx) com sucesso!`);
+    } catch (e) {
+      console.error('Erro ao gerar XLS do gráfico:', e);
+      showToast('Erro ao exportar XLS do gráfico. Tente novamente.');
+    }
+  };
+
+  // ==========================================================================
+  // DOWNLOAD INDIVIDUAL CHART TOPIC AS PDF REPORT
+  // ==========================================================================
+  const downloadChartPDF = (
+    chartTitle: string,
+    cardId: string,
+    headers: string[],
+    rows: (string | number)[][],
+    summaryNote?: string
+  ) => {
+    try {
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const today = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Header Banner
+      doc.setFillColor(156, 39, 68); // #9C2744
+      doc.rect(0, 0, 210, 28, 'F');
+
+      doc.setFont('times', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Dra. Léia Mar — Studio de Fisioterapia & Pilates', 14, 12);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 235, 240);
+      doc.text(`CREFITO: ${clinic.crefito}  •  CNPJ: 69.533.975/0001-81 - MOVEX CENTRO DE MOVIMENTO E PERFORMANCE`, 14, 18);
+      doc.text(`Endereço: ${clinic.address}, ${clinic.neighborhood} — ${clinic.cityState}  •  WhatsApp: ${clinic.phoneDisplay}`, 14, 23);
+
+      // Report Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(38, 22, 27);
+      doc.text(`Relatório Gráfico: ${chartTitle}`, 14, 38);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(91, 68, 76);
+      doc.text(`Emissão: ${today}  |  Página: Dashboard de Indicadores & Gráficos`, 14, 44);
+
+      if (summaryNote) {
+        doc.setFontSize(8.5);
+        doc.setTextColor(140, 59, 80);
+        doc.text(`Nota Analítica: ${summaryNote}`, 14, 50);
+      }
+
+      // Summary Table of Chart Data
+      autoTable(doc, {
+        startY: summaryNote ? 54 : 48,
+        head: [headers],
+        body: rows.map(r => r.map(c => String(c))),
+        theme: 'grid',
+        headStyles: {
+          fillColor: [156, 39, 68],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9
+        },
+        bodyStyles: {
+          textColor: [38, 22, 27],
+          fontSize: 8.5,
+          cellPadding: 3.5
+        },
+        alternateRowStyles: {
+          fillColor: [255, 248, 250]
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      const finalY = (doc as any).lastAutoTable?.finalY || 120;
+      doc.setFontSize(8);
+      doc.setTextColor(168, 130, 143);
+      doc.text(
+        'Documento gerado eletronicamente pela plataforma oficial Dra. Léia Mar. Em conformidade com a LGPD e normas do COFFITO.',
+        14,
+        Math.min(finalY + 12, 280)
+      );
+
+      const cleanFilename = chartTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const todayStr = new Date().toISOString().split('T')[0];
+      doc.save(`Relatorio_Grafico_${cleanFilename}_Dra_Leia_Mar_${todayStr}.pdf`);
+      showToast(`Relatório do gráfico "${chartTitle}" baixado em PDF com sucesso!`);
+    } catch (e) {
+      console.error('Erro ao gerar PDF do gráfico:', e);
+      showToast('Erro ao exportar PDF do gráfico. Tente novamente.');
+    }
+  };
+
+  // ==========================================================================
+  // EXPORT COMPLETE DASHBOARD XLS (EXCEL COM TODAS AS ABAS)
+  // ==========================================================================
+  const handleExportFullDashboardXLS = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Resumo KPIs
+      const kpiData = [
+        { 'Indicador': 'Total de Alunos Matriculados', 'Valor': totalStudents },
+        { 'Indicador': 'Alunos Ativos', 'Valor': activeStudents },
+        { 'Indicador': 'Alunos Gympass / Avulso', 'Valor': gympassStudents },
+        { 'Indicador': 'Faturamento Bruto Contratado', 'Valor': formatBRL(totalContractRevenue) },
+        { 'Indicador': 'Repasse Academia (50%)', 'Valor': formatBRL(totalGymPassPayout) },
+        { 'Indicador': 'Repasse Profissionais', 'Valor': formatBRL(totalProfPayout) },
+        { 'Indicador': 'Saldo Líquido da Clínica', 'Valor': formatBRL(totalNetClinic) },
+        { 'Indicador': 'Total de Agendamentos Online', 'Valor': appointments.length },
+        { 'Indicador': 'Prontuários e Pacientes Cadastrados', 'Valor': patients.length }
+      ];
+      const wsKpi = XLSX.utils.json_to_sheet(kpiData);
+      wsKpi['!cols'] = [{ wch: 38 }, { wch: 24 }];
+      XLSX.utils.book_append_sheet(wb, wsKpi, 'Resumo_Geral');
+
+      // Sheet 2: Alunos por Status
+      const alunosStatus = [
+        { Status: 'Ativos', Quantidade: activeStudents, Percentual: `${totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}%` },
+        { Status: 'Gympass / Avulso', Quantidade: gympassStudents, Percentual: `${totalStudents > 0 ? ((gympassStudents / totalStudents) * 100).toFixed(1) : 0}%` },
+        { Status: 'Trancados / Concluídos', Quantidade: inactiveStudents, Percentual: `${totalStudents > 0 ? ((inactiveStudents / totalStudents) * 100).toFixed(1) : 0}%` }
+      ];
+      const wsAlunos = XLSX.utils.json_to_sheet(alunosStatus);
+      wsAlunos['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, wsAlunos, 'Alunos_Status');
+
+      // Sheet 3: Progresso de Aulas
+      const progressoData = classes.map(c => ({
+        'Aluno': c.studentName,
+        'Plano': c.planType,
+        'Aulas Realizadas': c.attendedHours || 0,
+        'Aulas Restantes': Math.max(0, (c.totalClassHours || 0) - (c.attendedHours || 0)),
+        'Total de Aulas': c.totalClassHours || 0,
+        'Percentual Concluído': `${(c.totalClassHours || 0) > 0 ? (((c.attendedHours || 0) / (c.totalClassHours || 8)) * 100).toFixed(0) : 0}%`
+      }));
+      const wsProg = XLSX.utils.json_to_sheet(progressoData);
+      wsProg['!cols'] = [{ wch: 30 }, { wch: 24 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsProg, 'Progresso_Aulas');
+
+      // Sheet 4: Financeiro por Aluno / Plano
+      const finModalidades = classes.map(c => ({
+        'Aluno': c.studentName,
+        'Plano / Modalidade': c.planType,
+        'Valor do Plano': formatBRL(c.totalPlanValue || 0),
+        'Mensalidade': formatBRL(c.monthlyInstallmentValue || 0),
+        'Repasse Academia (50%)': formatBRL(c.gymPassValue || 0),
+        'Repasse Profissional': formatBRL(c.professionalPassValue || 0),
+        'Status': c.status.toUpperCase()
+      }));
+      const wsFin = XLSX.utils.json_to_sheet(finModalidades);
+      wsFin['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 22 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, wsFin, 'Fin_Alunos');
+
+      // Sheet 5: Profissionais
+      const profData = professionals.map(p => {
+        const pStudents = classes.filter(c => c.professionalName === p.name);
+        const pAttended = pStudents.reduce((acc, c) => acc + (c.attendedHours || 0), 0);
+        const pRevenue = pStudents.reduce((acc, c) => acc + (c.totalPlanValue || 0), 0);
+        const pPayout = pStudents.reduce((acc, c) => acc + (c.professionalPassValue || 0), 0);
+        return {
+          'Profissional': p.name,
+          'Cargo / Especialidade': p.roleTitle || 'Fisioterapeuta',
+          'Alunos Vinculados': pStudents.length,
+          'Aulas Realizadas': pAttended,
+          'Faturamento Bruto': formatBRL(pRevenue),
+          'Repasse Devido': formatBRL(pPayout)
+        };
+      });
+      const wsProf = XLSX.utils.json_to_sheet(profData);
+      wsProf['!cols'] = [{ wch: 28 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsProf, 'Profissionais');
+
+      // Sheet 6: Agendamentos
+      const aptData = [
+        { 'Status': 'Confirmados', 'Quantidade': confirmedAppointments },
+        { 'Status': 'Pendentes', 'Quantidade': pendingAppointments },
+        { 'Status': 'Concluídos', 'Quantidade': completedAppointments },
+        { 'Status': 'Cancelados', 'Quantidade': cancelledAppointments }
+      ];
+      const wsApts = XLSX.utils.json_to_sheet(aptData);
+      wsApts['!cols'] = [{ wch: 24 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, wsApts, 'Agendamentos');
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Dashboard_Indicadores_Graficos_Dra_Leia_Mar_${todayStr}.xlsx`);
+      showToast('Relatório completo do Dashboard (.xlsx) baixado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao exportar dashboard XLS:', err);
+      showToast('Erro ao exportar planilha do Dashboard.');
+    }
   };
 
   // ==========================================================================
@@ -263,13 +472,14 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
       doc.setFont('times', 'bold');
       doc.setFontSize(18);
       doc.setTextColor(255, 255, 255);
-      doc.text('Dra. Léia Mar — Studio de Fisioterapia & Pilates', 14, 14);
+      doc.text('Dra. Léia Mar — Studio de Fisioterapia & Pilates', 14, 13);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
+      doc.setFontSize(8.5);
       doc.setTextColor(255, 235, 240);
-      doc.text(`CREFITO: ${clinic.crefito} | WhatsApp: ${clinic.phoneDisplay} | Adrianópolis - Manaus/AM`, 14, 21);
-      doc.text(`RELATÓRIO EXECUTIVO COMPLETO DE INTELIGÊNCIA & DASHBOARD — ${new Date().toLocaleDateString('pt-BR')}`, 14, 27);
+      doc.text(`CREFITO: ${clinic.crefito}  •  CNPJ: 69.533.975/0001-81 - MOVEX CENTRO DE MOVIMENTO E PERFORMANCE`, 14, 19);
+      doc.text(`WhatsApp: ${clinic.phoneDisplay}  •  Endereço: ${clinic.address}, ${clinic.neighborhood} - ${clinic.cityState}`, 14, 24);
+      doc.text(`RELATÓRIO EXECUTIVO COMPLETO DE INTELIGÊNCIA & DASHBOARD — ${new Date().toLocaleDateString('pt-BR')}`, 14, 29);
 
       // Section 1: KPIs
       doc.setFont('times', 'bold');
@@ -379,7 +589,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
             </h2>
 
             <p className="text-xs sm:text-sm text-[#FFEBF0]/90 leading-relaxed font-light">
-              Central de inteligência analítica no perfil <strong>PowerBI</strong>: todos os gráficos consolidados de cada categoria da clínica, com comparativos em tempo real e <strong>opção de baixar cada gráfico individualmente em PNG de alta resolução ou exportar seus dados em CSV</strong>.
+              Central de inteligência analítica no perfil <strong>PowerBI</strong>: todos os gráficos consolidados de cada categoria da clínica, com comparativos em tempo real e <strong>opção de baixar relatórios gráficos nos formatos .XLS e .PDF para todos os tópicos</strong> ou em imagens PNG.
             </p>
 
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-[#FCD6E0]/90">
@@ -390,7 +600,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                 <Check className="w-3.5 h-3.5 text-emerald-400" /> 16 Gráficos Interativos
               </span>
               <span className="inline-flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">
-                <Check className="w-3.5 h-3.5 text-emerald-400" /> Download Individual de cada Gráfico
+                <Check className="w-3.5 h-3.5 text-emerald-400" /> Relatórios Individuais .XLS e .PDF
               </span>
               <span className="inline-flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg">
                 <Check className="w-3.5 h-3.5 text-emerald-400" /> Padrão COFFITO & LGPD
@@ -399,15 +609,23 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-3 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end gap-2.5 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleExportFullDashboardXLS}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-[#EBF7EE] hover:bg-[#D5EEDC] text-[#1D7A46] border border-[#B6E3C3] font-bold text-xs sm:text-sm transition-all shadow-md hover:shadow-lg cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-[#1D7A46]" />
+              <span>Exportar Dashboard (.XLS)</span>
+            </button>
             <button
               type="button"
               onClick={handleExportFullDashboardPDF}
               disabled={isExportingAll}
-              className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#D85072] to-[#BC3859] hover:from-[#BC3859] hover:to-[#9C2744] text-white font-bold text-xs sm:text-sm transition-all shadow-lg hover:shadow-xl cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#D85072] to-[#BC3859] hover:from-[#BC3859] hover:to-[#9C2744] text-white font-bold text-xs sm:text-sm transition-all shadow-lg hover:shadow-xl cursor-pointer"
             >
-              <Download className="w-4 h-4" />
-              <span>{isExportingAll ? 'Gerando Relatório...' : 'Exportar Relatório do Dashboard (PDF)'}</span>
+              <FileText className="w-4 h-4 text-white" />
+              <span>{isExportingAll ? 'Gerando Relatório...' : 'Exportar Dashboard (.PDF)'}</span>
             </button>
             <span className="text-[11px] text-[#FFEBF0]/70 text-center lg:text-right">
               Atualizado em: {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -572,9 +790,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Distribuição de Alunos por Status',
                       'Alunos_Por_Status',
                       ['Status', 'Quantidade', 'Percentual'],
                       [
@@ -582,11 +801,30 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Gympass / Avulso', gympassStudents, `${totalStudents > 0 ? ((gympassStudents / totalStudents) * 100).toFixed(1) : 0}%`],
                         ['Trancados / Concluídos', inactiveStudents, `${totalStudents > 0 ? ((inactiveStudents / totalStudents) * 100).toFixed(1) : 0}%`]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Distribuição de Alunos por Status',
+                      'chart-alunos-status',
+                      ['Status', 'Quantidade', 'Percentual'],
+                      [
+                        ['Ativos', activeStudents, `${totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}%`],
+                        ['Gympass / Avulso', gympassStudents, `${totalStudents > 0 ? ((gympassStudents / totalStudents) * 100).toFixed(1) : 0}%`],
+                        ['Trancados / Concluídos', inactiveStudents, `${totalStudents > 0 ? ((inactiveStudents / totalStudents) * 100).toFixed(1) : 0}%`]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -684,9 +922,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Progresso e Aulas por Aluno',
                       'Progresso_Aulas_Alunos',
                       ['Aluno', 'Plano', 'Aulas Realizadas', 'Aulas Restantes', 'Total'],
                       classes.map(c => [
@@ -696,11 +935,32 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         Math.max(0, (c.totalClassHours || 0) - (c.attendedHours || 0)),
                         c.totalClassHours || 0
                       ])
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Progresso e Aulas por Aluno',
+                      'chart-aulas-progresso',
+                      ['Aluno', 'Plano', 'Aulas Realizadas', 'Aulas Restantes', 'Total'],
+                      classes.map(c => [
+                        c.studentName,
+                        c.planType,
+                        c.attendedHours || 0,
+                        Math.max(0, (c.totalClassHours || 0) - (c.attendedHours || 0)),
+                        c.totalClassHours || 0
+                      ])
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -793,9 +1053,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Composição do Faturamento',
                       'Composicao_Faturamento',
                       ['Item', 'Valor (R$)', 'Percentual'],
                       [
@@ -804,11 +1065,31 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Repasse Instrutores / Fisioterapeutas', formatBRL(totalProfPayout), `${totalContractRevenue > 0 ? ((totalProfPayout / totalContractRevenue) * 100).toFixed(1) : 0}%`],
                         ['Saldo Líquido da Clínica', formatBRL(totalNetClinic), `${totalContractRevenue > 0 ? ((totalNetClinic / totalContractRevenue) * 100).toFixed(1) : 0}%`]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Composição do Faturamento',
+                      'chart-faturamento-composicao',
+                      ['Item', 'Valor (R$)', 'Percentual'],
+                      [
+                        ['Faturamento Total Bruto', formatBRL(totalContractRevenue), '100%'],
+                        ['Repasse Academia NEW FIT (50%)', formatBRL(totalGymPassPayout), '50%'],
+                        ['Repasse Instrutores / Fisioterapeutas', formatBRL(totalProfPayout), `${totalContractRevenue > 0 ? ((totalProfPayout / totalContractRevenue) * 100).toFixed(1) : 0}%`],
+                        ['Saldo Líquido da Clínica', formatBRL(totalNetClinic), `${totalContractRevenue > 0 ? ((totalNetClinic / totalContractRevenue) * 100).toFixed(1) : 0}%`]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -912,9 +1193,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Distribuição por Modalidade',
                       'Eficiencia_Financeira',
                       ['Indicador', 'Valor'],
                       [
@@ -923,11 +1205,31 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Receita Mensal Recorrente Total', `${formatBRL(totalMonthlyRevenue)} / mês`],
                         ['Margem Líquida da Clínica', `${totalContractRevenue > 0 ? ((totalNetClinic / totalContractRevenue) * 100).toFixed(1) : 0}%`]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Distribuição por Modalidade',
+                      'chart-modalidades',
+                      ['Indicador', 'Valor'],
+                      [
+                        ['Ticket Médio de Contrato por Aluno', formatBRL(avgTicketPerStudent)],
+                        ['Valor Médio da Hora/Aula Ministrada', `${formatBRL(avgHourlyCost)} / hora`],
+                        ['Receita Mensal Recorrente Total', `${formatBRL(totalMonthlyRevenue)} / mês`],
+                        ['Margem Líquida da Clínica', `${totalContractRevenue > 0 ? ((totalNetClinic / totalContractRevenue) * 100).toFixed(1) : 0}%`]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1024,9 +1326,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Mix de Serviços e Planos',
                       'Mix_Servicos_Planos',
                       ['Categoria', 'Quantidade de Planos'],
                       [
@@ -1036,11 +1339,32 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Anual', servicesByCategory.anual.length],
                         ['Avulso / Gympass', servicesByCategory.avulso.length]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Mix de Serviços e Planos',
+                      'chart-servicos-mix',
+                      ['Categoria', 'Quantidade de Planos'],
+                      [
+                        ['Mensal', servicesByCategory.mensal.length],
+                        ['Trimestral', servicesByCategory.trimestral.length],
+                        ['Semestral', servicesByCategory.semestral.length],
+                        ['Anual', servicesByCategory.anual.length],
+                        ['Avulso / Gympass', servicesByCategory.avulso.length]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1101,17 +1425,33 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Comparativo de Preços de Serviços',
                       'Comparativo_Precos_Servicos',
                       ['Serviço', 'Categoria', 'Valor Total (R$)', 'Mensalidade (R$)'],
                       services.map(s => [s.name, s.planCategory, s.totalValue || 0, s.monthlyValue || 0])
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Comparativo de Preços de Serviços',
+                      'chart-servicos-precos',
+                      ['Serviço', 'Categoria', 'Valor Total (R$)', 'Mensalidade (R$)'],
+                      services.map(s => [s.name, s.planCategory, s.totalValue || 0, s.monthlyValue || 0])
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1183,9 +1523,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Alunos por Profissional',
                       'Alunos_Por_Profissional',
                       ['Profissional', 'Cargo', 'Alunos Vinculados'],
                       professionals.map(p => [
@@ -1193,11 +1534,30 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         p.roleTitle || 'Fisioterapeuta',
                         classes.filter(c => c.professionalName === p.name).length
                       ])
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Alunos por Profissional',
+                      'chart-profissionais-alunos',
+                      ['Profissional', 'Cargo', 'Alunos Vinculados'],
+                      professionals.map(p => [
+                        p.name,
+                        p.roleTitle || 'Fisioterapeuta',
+                        classes.filter(c => c.professionalName === p.name).length
+                      ])
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1251,9 +1611,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Faturamento e Repasses por Profissional',
                       'Faturamento_Repasse_Profissionais',
                       ['Profissional', 'Faturamento (R$)', 'Repasse (R$)'],
                       professionals.map(p => {
@@ -1264,11 +1625,33 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                           formatBRL(pClasses.reduce((acc, c) => acc + (c.professionalPassValue || 0), 0))
                         ];
                       })
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Faturamento e Repasses por Profissional',
+                      'chart-profissionais-faturamento',
+                      ['Profissional', 'Faturamento (R$)', 'Repasse (R$)'],
+                      professionals.map(p => {
+                        const pClasses = classes.filter(c => c.professionalName === p.name);
+                        return [
+                          p.name,
+                          formatBRL(pClasses.reduce((acc, c) => acc + (c.totalPlanValue || 0), 0)),
+                          formatBRL(pClasses.reduce((acc, c) => acc + (c.professionalPassValue || 0), 0))
+                        ];
+                      })
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1344,9 +1727,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Agendamentos Online por Status',
                       'Agendamentos_Por_Status',
                       ['Status', 'Quantidade'],
                       [
@@ -1355,11 +1739,31 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Concluídos', completedAppointments],
                         ['Cancelados', cancelledAppointments]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Agendamentos Online por Status',
+                      'chart-agenda-status',
+                      ['Status', 'Quantidade'],
+                      [
+                        ['Confirmados', confirmedAppointments],
+                        ['Pendentes', pendingAppointments],
+                        ['Concluídos', completedAppointments],
+                        ['Cancelados', cancelledAppointments]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1426,9 +1830,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Agendamentos por Turno',
                       'Agendamentos_Por_Turno',
                       ['Turno', 'Horário', 'Quantidade'],
                       [
@@ -1436,11 +1841,30 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Tarde', '12:00 às 17:59', afternoonApts],
                         ['Noite', '18:00 às 21:00', eveningApts]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Agendamentos por Turno',
+                      'chart-agenda-turnos',
+                      ['Turno', 'Horário', 'Quantidade'],
+                      [
+                        ['Manhã', '07:00 às 11:59', morningApts],
+                        ['Tarde', '12:00 às 17:59', afternoonApts],
+                        ['Noite', '18:00 às 21:00', eveningApts]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1521,9 +1945,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Condições Clínicas e Queixas',
                       'Condicoes_Clinicas',
                       ['Condição Clínica', 'Quantidade', 'Percentual'],
                       [
@@ -1532,11 +1957,31 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Pilates Gestacional (Gravidez)', pregnantPatients, `${totalPatients > 0 ? ((pregnantPatients / totalPatients) * 100).toFixed(1) : 0}%`],
                         ['Atenção Pressão / Cardíaco', cardiacPatients, `${totalPatients > 0 ? ((cardiacPatients / totalPatients) * 100).toFixed(1) : 0}%`]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Condições Clínicas e Queixas',
+                      'chart-historico-condicoes',
+                      ['Condição Clínica', 'Quantidade', 'Percentual'],
+                      [
+                        ['Dor Crônica / Coluna', chronicPainPatients, `${totalPatients > 0 ? ((chronicPainPatients / totalPatients) * 100).toFixed(1) : 0}%`],
+                        ['Cirurgias Prévias (Reabilitação)', surgeryPatients, `${totalPatients > 0 ? ((surgeryPatients / totalPatients) * 100).toFixed(1) : 0}%`],
+                        ['Pilates Gestacional (Gravidez)', pregnantPatients, `${totalPatients > 0 ? ((pregnantPatients / totalPatients) * 100).toFixed(1) : 0}%`],
+                        ['Atenção Pressão / Cardíaco', cardiacPatients, `${totalPatients > 0 ? ((cardiacPatients / totalPatients) * 100).toFixed(1) : 0}%`]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>
@@ -1595,9 +2040,10 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                   >
                     <Download className="w-4 h-4" />
                   </button>
-                  <button
+                                    <button
                     type="button"
-                    onClick={() => downloadChartDataCSV(
+                    onClick={() => downloadChartDataXLS(
+                      'Faixa Etária e Termos LGPD',
                       'Faixa_Etaria_LGPD',
                       ['Faixa Etária / Termo', 'Quantidade'],
                       [
@@ -1608,11 +2054,33 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({ isUserPort
                         ['Termos LGPD Assinados', lgpdSignedPatients],
                         ['Uso de Imagem Autorizado', imageAuthorizedPatients]
                       ]
+                    
                     )}
                     className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#EBF7EE] text-[#1D7A46] border border-[#B6E3C3] transition-colors cursor-pointer"
-                    title="Baixar Dados em CSV"
+                    title="Baixar Dados em Relatório XLS (.xlsx)"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChartPDF(
+                      'Faixa Etária e Termos LGPD',
+                      'chart-historico-faixa',
+                      ['Faixa Etária / Termo', 'Quantidade'],
+                      [
+                        ['Até 29 anos', ageGroups.under30],
+                        ['30 a 45 anos', ageGroups.from30to45],
+                        ['46 a 60 anos', ageGroups.from46to60],
+                        ['Acima de 60 anos (Sênior)', ageGroups.over60],
+                        ['Termos LGPD Assinados', lgpdSignedPatients],
+                        ['Uso de Imagem Autorizado', imageAuthorizedPatients]
+                      ]
+                    
+                    )}
+                    className="p-2 rounded-xl bg-[#FFFDFB] hover:bg-[#FFEBF0] text-[#9C2744] border border-[#FCD6E0] transition-colors cursor-pointer"
+                    title="Baixar Relatório Gráfico em PDF (.pdf)"
+                  >
+                    <FileText className="w-4 h-4 text-[#D85072]" />
                   </button>
                 </div>
               </div>

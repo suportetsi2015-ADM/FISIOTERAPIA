@@ -57,8 +57,7 @@ export type UserTab =
   | 'schedule'
   | 'servicos'
   | 'profissionais'
-  | 'folha'
-  | 'relatorios';
+  | 'folha';
 
 export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchToAdmin }) => {
   const clinic = useClinicData();
@@ -560,31 +559,17 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
               <Banknote className="w-4 h-4" />
               <span>Folha de Pagamento</span>
             </button>
-
-            {/* 10. Relatório Geral Consolidado conforme Tela 22 */}
-            <button
-              onClick={() => setActiveTab('relatorios')}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                activeTab === 'relatorios'
-                  ? 'bg-[#D85072] text-white shadow-xs font-bold'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>Relatório Geral Consolidado</span>
-            </button>
           </div>
         </div>
       </header>
 
       {/* Main Tab Content */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {/* TABS 1, 2, 6, 7, 8: AULAS DE PILATES, GESTÃO FINANCEIRA, TABELA DE SERVIÇOS, CADASTRO DE PROFISSIONAIS E RELATÓRIOS */}
+        {/* TABS: AULAS DE PILATES, GESTÃO FINANCEIRA, TABELA DE SERVIÇOS, CADASTRO DE PROFISSIONAIS */}
         {(activeTab === 'aulas' ||
           activeTab === 'financeiro' ||
           activeTab === 'servicos' ||
-          activeTab === 'profissionais' ||
-          activeTab === 'relatorios') && (
+          activeTab === 'profissionais') && (
           <AdminAulasPilatesTab
             portalSection={activeTab}
             initialSubView={activeTab === 'servicos' ? 'servicos' : 'geral'}

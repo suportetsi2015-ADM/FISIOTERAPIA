@@ -360,6 +360,10 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
               safeStorage.setItem('dra_leia_faqs_v1', JSON.stringify(payload.data));
               window.dispatchEvent(new Event('dra_leia_faqs_updated'));
               window.dispatchEvent(new CustomEvent('admin-sync-faq_data', { detail: payload.data }));
+            } else if (payload.entity === 'header_data' && payload.data) {
+              safeStorage.setItem('dra_leia_header_config_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new Event('dra_leia_header_updated'));
+              window.dispatchEvent(new CustomEvent('admin-sync-header_data', { detail: payload.data }));
             } else if (payload.entity === 'footer_data' && payload.data) {
               safeStorage.setItem('dra_leia_footer_config_v1', JSON.stringify(payload.data));
               window.dispatchEvent(new Event('dra_leia_footer_updated'));

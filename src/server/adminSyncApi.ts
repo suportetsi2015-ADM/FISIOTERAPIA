@@ -99,6 +99,7 @@ export async function handleAdminSyncApi(req: any, res: any): Promise<boolean> {
     '/api/clinical-patients': 'clinical_patients',
     '/api/payroll-adjustments': 'payroll_adjustments',
     '/api/faq-data': 'faq_data',
+    '/api/header-data': 'header_data',
     '/api/footer-data': 'footer_data',
     '/api/studio-data': 'studio_data',
     '/api/auth-passwords': 'auth_passwords'

@@ -49,13 +49,15 @@ import {
   exportPilatesStudentsOnlyToXLS,
   exportPilatesStudentsOnlyToPDF,
   exportPilatesFinancialOnlyToXLS,
-  exportPilatesFinancialOnlyToPDF
+  exportPilatesFinancialOnlyToPDF,
+  exportProfessionalsToXLS,
+  exportProfessionalsToPDF
 } from '../../data/pilatesClassesStore';
 import { CLINIC_INFO } from '../../data/content';
 import { formatPhoneBR } from '../../utils/phoneFormatter';
 
 export interface AdminAulasPilatesTabProps {
-  portalSection?: 'aulas' | 'financeiro' | 'servicos' | 'profissionais' | 'relatorios';
+  portalSection?: 'aulas' | 'financeiro' | 'servicos' | 'profissionais';
   initialSubView?: 'geral' | 'individual' | 'tabela' | 'servicos';
   triggerOpenProfModal?: number;
   triggerOpenReportModal?: number;
@@ -348,6 +350,16 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
     }
     exportPilatesToPDF(activeReportDataset, activeReportTitleSuffix);
     showToast(`Relatório oficial em PDF baixado com sucesso!`);
+  };
+
+  const handleExportProfessionalsXLS = () => {
+    exportProfessionalsToXLS(professionals, classes);
+    showToast('Planilha de Cadastro de Profissionais (.xlsx) baixada com sucesso!');
+  };
+
+  const handleExportProfessionalsPDF = () => {
+    exportProfessionalsToPDF(professionals, classes);
+    showToast('Relatório Oficial de Profissionais em PDF baixado com sucesso!');
   };
 
   // ---------------------------------------------------------------------------
@@ -867,58 +879,6 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
       )}
 
       {/* =================================================================== */}
-      {/* ABA "RELATÓRIO GERAL CONSOLIDADO" (portalSection === 'relatorios'): */}
-      {/* Dedicada exclusivamente ao Relatório Geral Consolidado              */}
-      {/* =================================================================== */}
-      {portalSection === 'relatorios' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#FCD6E0] shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFEBF0] text-[#9C2744] text-xs font-semibold tracking-wider uppercase mb-3 border border-[#FCD6E0]">
-                <FileText className="w-3.5 h-3.5 text-[#D85072]" />
-                <span>Relatório Geral Consolidado</span>
-              </div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#26161B] tracking-tight">
-                RELATÓRIO GERAL CONSOLIDADO
-              </h2>
-              <p className="text-sm text-[#5B444C] mt-1 max-w-2xl">
-                Visão executiva e financeira integrada da clínica com consulta analítica em tela e exportação oficial em planilhas XLS e documentos PDF.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handleExportXLS}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#1D7A46] bg-[#EBF7EE] hover:bg-[#D5EEDC] border border-[#B6E3C3] transition-colors cursor-pointer"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-[#1D7A46]" />
-                <span>Baixar XLS</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportPDF}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#9C2744] bg-[#FFEBF0] hover:bg-[#FCD6E0] border border-[#FCD6E0] transition-colors cursor-pointer"
-              >
-                <FileText className="w-4 h-4 text-[#D85072]" />
-                <span>Baixar PDF</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleOpenPrintPreview}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#26161B] bg-white hover:bg-[#FFEBF0] border border-[#FCD6E0] transition-colors cursor-pointer shadow-2xs"
-              >
-                <Eye className="w-4 h-4 text-[#8C3B50]" />
-                <span>Relatório em Tela (Visual)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =================================================================== */}
       {/* ABA "CADASTRO DE PROFISSIONAIS" (portalSection === 'profissionais') */}
       {/* Exibição limpa e direta na tela quando clicado no topo do portal    */}
       {/* =================================================================== */}
@@ -936,6 +896,26 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleExportProfessionalsXLS}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#1D7A46] bg-[#EBF7EE] hover:bg-[#D5EEDC] border border-[#B6E3C3] transition-colors cursor-pointer"
+                title="Exportar Cadastro de Profissionais em Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-[#1D7A46]" />
+                <span>Baixar XLS</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportProfessionalsPDF}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#9C2744] bg-[#FFEBF0] hover:bg-[#FCD6E0] border border-[#FCD6E0] transition-colors cursor-pointer"
+                title="Exportar Cadastro de Profissionais em PDF (.pdf)"
+              >
+                <FileText className="w-4 h-4 text-[#D85072]" />
+                <span>Baixar PDF</span>
+              </button>
+
               <button
                 type="button"
                 onClick={resetProfessionalsList}
@@ -1190,10 +1170,10 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
       )}
 
       {/* =================================================================== */}
-      {/* KPI CARDS DA ABA "GESTÃO FINANCEIRA" E "RELATÓRIOS -> GERAL"        */}
+      {/* KPI CARDS DA ABA "GESTÃO FINANCEIRA"                                */}
       {/* (TUDO RELACIONADO A VALORES, MENSALIDADES E REPASSES)               */}
       {/* =================================================================== */}
-      {(portalSection === 'financeiro' || (portalSection === 'relatorios' && subView === 'geral')) && (
+      {portalSection === 'financeiro' && (
         <div className="space-y-6">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1289,96 +1269,9 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
       )}
 
       {/* =================================================================== */}
-      {/* SUB-VIEW 2: RELATÓRIO INDIVIDUAL POR PROFISSIONAL                   */}
+      {/* SUB-VIEW 3: TABELA DE SERVIÇOS & PLANOS                             */}
       {/* =================================================================== */}
-      {portalSection === 'relatorios' && subView === 'individual' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 border border-[#FCD6E0] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#8C3B50] mb-2">
-                Selecione o Profissional para Relatório Individual:
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                {professionalsList.map(name => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setSelectedProfessional(name)}
-                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                      selectedProfessional === name
-                        ? 'bg-[#9C2744] text-white shadow-xs'
-                        : 'bg-[#FFFDFB] text-[#5B444C] border border-[#FCD6E0] hover:bg-[#FFEBF0]'
-                    }`}
-                  >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>{name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
-              <button
-                type="button"
-                onClick={handleExportXLS}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[#1D7A46] bg-[#EBF7EE] hover:bg-[#D5EEDC] border border-[#B6E3C3] transition-colors cursor-pointer"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-[#1D7A46]" />
-                <span>Baixar XLS</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleExportPDF}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[#9C2744] bg-[#FFEBF0] hover:bg-[#FCD6E0] border border-[#FCD6E0] transition-colors cursor-pointer"
-              >
-                <FileText className="w-3.5 h-3.5 text-[#D85072]" />
-                <span>Baixar PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenPrintPreview}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#26161B] border border-[#FCD6E0] hover:bg-[#FFEBF0] cursor-pointer"
-              >
-                <Eye className="w-3.5 h-3.5 text-[#8C3B50]" />
-                <span>Relatório em Tela (Visual)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* KPI Individual */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-3xl p-5 border border-[#FCD6E0]">
-              <span className="text-xs font-bold text-[#8C3B50] uppercase">Alunos Vinculados</span>
-              <p className="font-serif text-2xl font-bold text-[#26161B] mt-1">
-                {professionalStats.totalAlunos} alunos ({professionalStats.ativos} ativos)
-              </p>
-            </div>
-            <div className="bg-white rounded-3xl p-5 border border-[#FCD6E0]">
-              <span className="text-xs font-bold text-[#9C2744] uppercase">Faturamento Alunos</span>
-              <p className="font-serif text-2xl font-bold text-[#9C2744] mt-1">
-                {formatBRL(professionalStats.faturamentoProf)}
-              </p>
-            </div>
-            <div className="bg-white rounded-3xl p-5 border border-[#FCD6E0]">
-              <span className="text-xs font-bold text-[#1877F2] uppercase">Repasse deste Profissional</span>
-              <p className="font-serif text-2xl font-bold text-[#1877F2] mt-1">
-                {formatBRL(professionalStats.repasseProfissional)}
-              </p>
-            </div>
-            <div className="bg-white rounded-3xl p-5 border border-[#FCD6E0]">
-              <span className="text-xs font-bold text-[#8C3B50] uppercase">Aulas Realizadas</span>
-              <p className="font-serif text-2xl font-bold text-[#26161B] mt-1">
-                {professionalStats.aulasRealizadas} aulas
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =================================================================== */}
-      {/* SUB-VIEW 3: TABELA DE SERVIÇOS & PLANOS (REQUIREMENT B)             */}
-      {/* =================================================================== */}
-      {(portalSection === 'servicos' || (portalSection === 'relatorios' && subView === 'servicos')) && (
+      {portalSection === 'servicos' && (
         <div className="space-y-6">
           {/* Top Bar for Tabela de Serviços */}
           <div className="bg-white rounded-3xl p-6 border border-[#FCD6E0] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1963,7 +1856,7 @@ export const AdminAulasPilatesTab: React.FC<AdminAulasPilatesTabProps> = ({
       {/* =================================================================== */}
       {/* TABELA 3: ABA "RELATÓRIOS" (CONSOLIDADO GERAL / PROFISSIONAL / ALUNOS) */}
       {/* =================================================================== */}
-      {portalSection === 'relatorios' && subView !== 'servicos' && (
+      {false && (
         <div className="bg-white rounded-3xl border border-[#FCD6E0] shadow-sm overflow-hidden">
           {/* Table Toolbar */}
           <div className="p-4 sm:p-6 border-b border-[#FCD6E0] flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -68,6 +68,7 @@ import { AdminSobreTab } from './admin/AdminSobreTab';
 import { AdminEspacoTab } from './admin/AdminEspacoTab';
 import { AdminLocalizacaoTab } from './admin/AdminLocalizacaoTab';
 import { AdminFaqTab } from './admin/AdminFaqTab';
+import { AdminCabecalhoTab } from './admin/AdminCabecalhoTab';
 import { AdminRodapeTab } from './admin/AdminRodapeTab';
 import { AdminAulasPilatesTab } from './admin/AdminAulasPilatesTab';
 import { AdminHistoricoClinicoTab } from './admin/AdminHistoricoClinicoTab';
@@ -83,6 +84,7 @@ interface AdminPortalProps {
 
 export type AdminTab =
   | 'inicio'
+  | 'cabecalho'
   | 'sobre'
   | 'espaco'
   | 'localizacao'
@@ -92,7 +94,6 @@ export type AdminTab =
   | 'dashboard'
   | 'servicos'
   | 'profissionais'
-  | 'relatorios'
   | 'historico'
   | 'faq'
   | 'rodape'
@@ -532,6 +533,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
             </button>
 
             <button
+              onClick={() => setActiveTab('cabecalho')}
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === 'cabecalho'
+                  ? 'bg-[#D85072] text-white shadow-xs font-bold'
+                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
+              }`}
+            >
+              <Sliders className="w-4 h-4" />
+              <span>Cabeçalho & Logo</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('sobre')}
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'sobre'
@@ -637,18 +650,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
             >
               <UserPlus className="w-4 h-4" />
               <span>Cadastro de Profissionais</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('relatorios')}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                activeTab === 'relatorios'
-                  ? 'bg-[#D85072] text-white shadow-xs'
-                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>Relatórios</span>
             </button>
 
             <button
@@ -775,13 +776,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
         )}
 
         {/* =================================================================== */}
-        {/* TAB 5: ABA AULAS DE PILATES, FINANCEIRO, SERVIÇOS, PROFISSIONAIS E RELATÓRIOS */}
+        {/* TAB 5: ABA AULAS DE PILATES, FINANCEIRO, SERVIÇOS E PROFISSIONAIS */}
         {/* =================================================================== */}
         {(activeTab === 'aulas' ||
           activeTab === 'financeiro' ||
           activeTab === 'servicos' ||
-          activeTab === 'profissionais' ||
-          activeTab === 'relatorios') && (
+          activeTab === 'profissionais') && (
           <AdminAulasPilatesTab
             portalSection={activeTab}
             initialSubView={activeTab === 'servicos' ? 'servicos' : 'geral'}

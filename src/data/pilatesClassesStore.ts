@@ -1557,4 +1557,126 @@ export function exportPilatesFinancialOnlyToPDF(classes: PilatesClassRecord[]): 
   doc.save(`Gestao_Financeira_Pilates_${todayStr}.pdf`);
 }
 
+// -------------------------------------------------------------
+// EXPORTAÇÃO DO CADASTRO DE PROFISSIONAIS (XLS & PDF)
+// -------------------------------------------------------------
+export function exportProfessionalsToXLS(professionals: PilatesProfessional[], classes: PilatesClassRecord[] = []): void {
+  const rows = professionals.map(p => {
+    const studentCount = classes.filter(c => (c.professionalName?.toLowerCase() === p.name?.toLowerCase()) && c.status === 'ativo').length;
+    return {
+      'Nome do Profissional': p.name,
+      'Cargo / Especialidade': p.roleTitle || 'Fisioterapeuta & Instrutor(a) de Pilates',
+      'CREFITO': p.crefito || 'Não informado',
+      'Telefone / WhatsApp': p.phone || 'Não informado',
+      'Status': p.active ? 'ATIVO' : 'INATIVO',
+      'Alunos Ativos Atendidos': studentCount,
+      'Data de Cadastro': p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '-'
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 30 },
+    { wch: 38 },
+    { wch: 18 },
+    { wch: 22 },
+    { wch: 14 },
+    { wch: 24 },
+    { wch: 18 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Profissionais');
+  const todayStr = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `Cadastro_Profissionais_Dra_Leia_Mar_${todayStr}.xlsx`);
+}
+
+export function exportProfessionalsToPDF(professionals: PilatesProfessional[], classes: PilatesClassRecord[] = []): void {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const today = new Date().toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  // Banner Superior
+  doc.setFillColor(140, 59, 80);
+  doc.rect(0, 0, 297, 26, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Dra. Léia Mar — Fisioterapia & Pilates', 14, 11);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`CREFITO: ${CLINIC_INFO.crefito}  •  CNPJ: 69.533.975/0001-81 - MOVEX CENTRO DE MOVIMENTO E PERFORMANCE`, 14, 18);
+  doc.text(`WhatsApp: ${CLINIC_INFO.phoneDisplay}  •  Endereço: ${CLINIC_INFO.address}, ${CLINIC_INFO.neighborhood} - ${CLINIC_INFO.cityState}`, 14, 23);
+
+  doc.setTextColor(38, 22, 27);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Relatório Oficial de Cadastro & Gestão de Profissionais', 14, 34);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(91, 68, 76);
+  doc.text(`Emitido em: ${today}  |  Total de Profissionais Cadastrados: ${professionals.length}`, 14, 40);
+
+  const tableData = professionals.map(p => {
+    const studentCount = classes.filter(c => (c.professionalName?.toLowerCase() === p.name?.toLowerCase()) && c.status === 'ativo').length;
+    return [
+      p.name,
+      p.roleTitle || 'Fisioterapeuta & Instrutor(a)',
+      p.crefito || '-',
+      p.phone || '-',
+      p.active ? 'ATIVO' : 'INATIVO',
+      String(studentCount),
+      p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '-'
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 45,
+    head: [
+      [
+        'Nome do Profissional',
+        'Cargo / Especialidade',
+        'CREFITO',
+        'Telefone / WhatsApp',
+        'Status',
+        'Alunos Ativos',
+        'Data Cadastro'
+      ]
+    ],
+    body: tableData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [140, 59, 80],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8.5
+    },
+    bodyStyles: {
+      textColor: [38, 22, 27],
+      fontSize: 8.5,
+      cellPadding: 3
+    },
+    alternateRowStyles: {
+      fillColor: [255, 248, 250]
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  doc.save(`Cadastro_Profissionais_Dra_Leia_Mar_${todayStr}.pdf`);
+}
+
 

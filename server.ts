@@ -124,6 +124,7 @@ async function startServer() {
       req.url.startsWith('/api/clinical-patients') ||
       req.url.startsWith('/api/payroll-adjustments') ||
       req.url.startsWith('/api/faq-data') ||
+      req.url.startsWith('/api/header-data') ||
       req.url.startsWith('/api/footer-data') ||
       req.url.startsWith('/api/studio-data') ||
       req.url.startsWith('/api/auth-passwords')
