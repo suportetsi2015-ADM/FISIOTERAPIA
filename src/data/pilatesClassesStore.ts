@@ -489,9 +489,9 @@ export function resetStoredPilatesClasses(): PilatesClassRecord[] {
   return INITIAL_PILATES_RECORDS;
 }
 
-// Sincronização inicial com o servidor
+// Sincronização inicial com o servidor com merge sem perda de dados
 if (typeof window !== 'undefined') {
-  fetch('/api/pilates-data')
+  fetch('/api/pilates-data?t=' + Date.now())
     .then((r) => r.json())
     .then((res) => {
       const d = res?.data;
@@ -505,9 +505,23 @@ if (typeof window !== 'undefined') {
           window.dispatchEvent(new Event('dra_leia_pilates_professionals_updated'));
         }
         if (Array.isArray(d.classes) && d.classes.length > 0) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(d.classes));
+          const localClasses = getStoredPilatesClasses();
+          const map = new Map<string, PilatesClassRecord>();
+          d.classes.forEach((c: PilatesClassRecord) => {
+            if (c && c.id) map.set(c.id, c);
+          });
+          localClasses.forEach((c: PilatesClassRecord) => {
+            if (c && c.id && !map.has(c.id)) {
+              map.set(c.id, c);
+            }
+          });
+          const merged = Array.from(map.values());
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
           window.dispatchEvent(new Event('dra_leia_pilates_classes_updated'));
         }
+      } else {
+        // Envia os registros locais para gravar no banco do servidor
+        syncPilatesDataToServer();
       }
     })
     .catch(() => {});

@@ -450,14 +450,32 @@ export function saveStoredClinicalPatients(patients: ClinicalPatient[]): void {
   }
 }
 
-// Sincronização inicial com o servidor
+// Sincronização inicial com o servidor com merge sem perda de dados
 if (typeof window !== 'undefined') {
-  fetch('/api/clinical-patients')
+  fetch('/api/clinical-patients?t=' + Date.now())
     .then((r) => r.json())
     .then((res) => {
+      const local = getStoredClinicalPatients();
       if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-        localStorage.setItem(CLINICAL_STORAGE_KEY, JSON.stringify(res.data));
+        const map = new Map<string, ClinicalPatient>();
+        res.data.forEach((p: ClinicalPatient) => {
+          if (p && p.id) map.set(p.id, p);
+        });
+        local.forEach((p: ClinicalPatient) => {
+          if (p && p.id && !map.has(p.id)) {
+            map.set(p.id, p);
+          }
+        });
+        const merged = Array.from(map.values());
+        localStorage.setItem(CLINICAL_STORAGE_KEY, JSON.stringify(merged));
         window.dispatchEvent(new Event('clinical_patients_updated'));
+      } else if (local && local.length > 0) {
+        // Envia os pacientes locais para salvar no servidor se o arquivo do servidor ainda não tiver sido gravado
+        fetch('/api/clinical-patients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(local)
+        }).catch(() => {});
       }
     })
     .catch(() => {});

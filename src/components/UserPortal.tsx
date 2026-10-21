@@ -19,7 +19,8 @@ import {
   Bell,
   Volume2,
   Sparkles,
-  Banknote
+  Banknote,
+  ShieldCheck
 } from 'lucide-react';
 import { useUserAuth } from '../data/userAuthStore';
 import { AdminAulasPilatesTab } from './admin/AdminAulasPilatesTab';
@@ -398,6 +399,21 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
                 )}
               </button>
 
+              {/* Botão DASHBOARD (transferido para a linha superior, ao lado do botão Alerta Online) */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm cursor-pointer ${
+                  activeTab === 'dashboard'
+                    ? 'bg-[#9C2744] text-white shadow-xs font-bold'
+                    : 'text-[#9C2744] bg-[#FFEBF0] hover:bg-[#FCD6E0] border border-[#FCD6E0]'
+                }`}
+                title="Dashboard com Gráficos e Indicadores"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>DASHBOARD</span>
+              </button>
+
               {/* Botão de Simulação / Teste do Alerta para fins de validação */}
               <button
                 type="button"
@@ -458,19 +474,6 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
             >
               <DollarSign className="w-4 h-4" />
               <span>Gestão Financeira</span>
-            </button>
-
-            {/* 3. DASHBOARD (Inteligência & Gráficos PowerBI) */}
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                activeTab === 'dashboard'
-                  ? 'bg-[#9C2744] text-white shadow-xs font-bold'
-                  : 'text-[#9C2744] bg-[#FFEBF0]/70 hover:bg-[#FFEBF0] border border-[#FCD6E0]'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>DASHBOARD</span>
             </button>
 
             {/* 4. Agenda & Marcações - Cor padrão da plataforma com contador de novos cadastros */}

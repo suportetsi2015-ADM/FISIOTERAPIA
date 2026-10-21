@@ -42,7 +42,8 @@ import {
   DollarSign,
   BarChart3,
   Banknote,
-  Sliders
+  Sliders,
+  Palette
 } from 'lucide-react';
 import { useAdminAuth } from '../data/adminAuthStore';
 import { setUserPassword } from '../data/userAuthStore';
@@ -71,6 +72,7 @@ import { AdminLocalizacaoTab } from './admin/AdminLocalizacaoTab';
 import { AdminFaqTab } from './admin/AdminFaqTab';
 import { AdminCabecalhoTab } from './admin/AdminCabecalhoTab';
 import { AdminRodapeTab } from './admin/AdminRodapeTab';
+import { AdminPaletaCoresTab } from './admin/AdminPaletaCoresTab';
 import { AdminOfficialPhotoSyncModal } from './admin/AdminOfficialPhotoSyncModal';
 
 interface AdminPortalProps {
@@ -85,6 +87,7 @@ export type AdminTab =
   | 'localizacao'
   | 'faq'
   | 'rodape'
+  | 'paleta'
   | 'security';
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
@@ -582,6 +585,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
             </button>
 
             <button
+              onClick={() => setActiveTab('paleta')}
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === 'paleta'
+                  ? 'bg-[#D85072] text-white shadow-xs font-bold'
+                  : 'text-[#5B444C] hover:bg-[#FFEBF0] hover:text-[#9C2744]'
+              }`}
+            >
+              <Palette className="w-4 h-4" />
+              <span>Paleta de Cores (Layout)</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('security')}
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
                 activeTab === 'security'
@@ -661,6 +676,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
           <AdminRodapeTab />
         )}
 
+        {/* =================================================================== */}
+        {/* TAB 8: PALETA DE CORES & LAYOUT COMPLETO DA ONE PAGE               */}
+        {/* =================================================================== */}
+        {activeTab === 'paleta' && (
+          <AdminPaletaCoresTab />
+        )}
 
         {/* =================================================================== */}
         {/* TAB 5: SEGURANÇA & SENHA DE ACESSO INDIVIDUAL                      */}

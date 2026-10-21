@@ -275,8 +275,13 @@ export async function handleAppointmentsApi(req: any, res: any): Promise<boolean
         }
 
         const appointments = loadAppointmentsFromDisk();
+        const idToUse = body.id && typeof body.id === 'string' && body.id.trim()
+          ? body.id.trim()
+          : `APT-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        const existingIdx = appointments.findIndex((a) => a.id === idToUse);
         const newApt: Appointment = {
-          id: `APT-${Math.floor(1000 + Math.random() * 9000)}`,
+          id: idToUse,
           patientName: String(body.patientName).trim(),
           patientPhone: formatPhoneBR(String(body.patientPhone).trim()),
           patientEmail: body.patientEmail ? String(body.patientEmail).trim() : undefined,
@@ -285,10 +290,16 @@ export async function handleAppointmentsApi(req: any, res: any): Promise<boolean
           service: body.service || 'Avaliação Fisioterapêutica & Pilates',
           notes: body.notes ? String(body.notes).trim() : undefined,
           status: body.status || 'pendente',
-          createdAt: new Date().toISOString()
+          createdAt: body.createdAt || new Date().toISOString()
         };
 
-        const updated = [newApt, ...appointments];
+        let updated: Appointment[];
+        if (existingIdx >= 0) {
+          updated = [...appointments];
+          updated[existingIdx] = newApt;
+        } else {
+          updated = [newApt, ...appointments];
+        }
         saveAppointmentsToDisk(updated);
 
         // Se for um cadastro pendente real, ativa o alerta sonoro e visual global

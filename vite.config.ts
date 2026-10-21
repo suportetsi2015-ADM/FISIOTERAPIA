@@ -47,73 +47,10 @@ function appointmentsBackendPlugin() {
   };
 }
 
-function officialPhotosPlugin() {
-  return {
-    name: 'official-photos-api',
-    configureServer(server: any) {
-      server.middlewares.use('/api/save-official-photo', (req: any, res: any) => {
-        if (req.method === 'POST') {
-          const chunks: Buffer[] = [];
-          req.on('data', (chunk: Buffer) => chunks.push(chunk));
-          req.on('end', () => {
-            try {
-              const body = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-              const { type, dataUrl } = body;
-              const matches = dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-              if (!matches) {
-                res.statusCode = 400;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: 'Formato de imagem inválido' }));
-                return;
-              }
-              const buffer = Buffer.from(matches[2], 'base64');
-              const filename =
-                type === 'principal' || type === 'studioHero' || type === 'hero'
-                  ? 'dra_leia_principal.jpg'
-                  : 'dra_leia_sobre.jpg';
-
-              const rootDir = import.meta.dirname || process.cwd();
-              const publicDir = path.resolve(rootDir, 'public/images');
-              const assetsDir = path.resolve(rootDir, 'src/assets/images');
-              const distImagesDir = path.resolve(rootDir, 'dist/images');
-
-              fs.mkdirSync(publicDir, { recursive: true });
-              fs.mkdirSync(assetsDir, { recursive: true });
-              if (fs.existsSync(path.resolve(rootDir, 'dist'))) {
-                fs.mkdirSync(distImagesDir, { recursive: true });
-                fs.writeFileSync(path.resolve(distImagesDir, filename), buffer);
-              }
-
-              const publicPath = path.resolve(publicDir, filename);
-              const assetsPath = path.resolve(assetsDir, filename);
-
-              fs.writeFileSync(publicPath, buffer);
-              fs.writeFileSync(assetsPath, buffer);
-
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({
-                success: true,
-                url: `/images/${filename}?t=${Date.now()}`
-              }));
-            } catch (err: any) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: err.message }));
-            }
-          });
-        } else {
-          res.statusCode = 405;
-          res.end('Method Not Allowed');
-        }
-      });
-    },
-  };
-}
-
 export default defineConfig(() => {
   const rootDir = import.meta.dirname || process.cwd();
   return {
-    plugins: [react(), tailwindcss(), appointmentsBackendPlugin(), officialPhotosPlugin()],
+    plugins: [react(), tailwindcss(), appointmentsBackendPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(rootDir, '.'),

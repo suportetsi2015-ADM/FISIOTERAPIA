@@ -49,18 +49,32 @@ export const AdminInicioTab: React.FC<AdminInicioTabProps> = ({
     }
   };
 
-  const handleApplyUrl = () => {
+  const handleApplyUrl = async () => {
     if (!urlInput.trim()) return;
-    saveOfficialPhoto('studioHero', urlInput.trim());
-    setUrlInput('');
-    setToast('Imagem da Seção Início atualizada via URL com sucesso!');
-    setTimeout(() => setToast(null), 4000);
+    try {
+      setIsUploading(true);
+      await saveOfficialPhoto('studioHero', urlInput.trim());
+      setUrlInput('');
+      setToast('Foto Principal atualizada com sucesso e sincronizada em todos os navegadores!');
+    } catch (err: any) {
+      setToast(err?.message || 'Erro ao atualizar foto via URL');
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
-  const handleResetPhoto = () => {
-    resetOfficialPhotos('studioHero');
-    setToast('Foto do Início restaurada para a original!');
-    setTimeout(() => setToast(null), 4000);
+  const handleResetPhoto = async () => {
+    try {
+      setIsUploading(true);
+      await resetOfficialPhotos('studioHero');
+      setToast('Foto do Início restaurada com sucesso!');
+    } catch (err: any) {
+      setToast(err?.message || 'Erro ao restaurar foto');
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
   const handleSubmitTexts = (e: React.FormEvent) => {

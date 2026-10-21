@@ -47,18 +47,32 @@ export const AdminSobreTab: React.FC<AdminSobreTabProps> = ({
     }
   };
 
-  const handleApplyUrl = () => {
+  const handleApplyUrl = async () => {
     if (!urlInput.trim()) return;
-    saveOfficialPhoto('portrait', urlInput.trim());
-    setUrlInput('');
-    setToast('Foto da Dra. Léia Mar atualizada via link!');
-    setTimeout(() => setToast(null), 4000);
+    try {
+      setIsUploading(true);
+      await saveOfficialPhoto('portrait', urlInput.trim());
+      setUrlInput('');
+      setToast('Foto da Seção Sobre atualizada com sucesso e sincronizada em todos os navegadores!');
+    } catch (err: any) {
+      setToast(err?.message || 'Erro ao atualizar foto via URL');
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
-  const handleResetPhoto = () => {
-    resetOfficialPhotos('portrait');
-    setToast('Foto original restaurada!');
-    setTimeout(() => setToast(null), 4000);
+  const handleResetPhoto = async () => {
+    try {
+      setIsUploading(true);
+      await resetOfficialPhotos('portrait');
+      setToast('Foto original da Seção Sobre restaurada com sucesso!');
+    } catch (err: any) {
+      setToast(err?.message || 'Erro ao restaurar foto');
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
   // Credentials management (adicionar/editar/excluir formações)

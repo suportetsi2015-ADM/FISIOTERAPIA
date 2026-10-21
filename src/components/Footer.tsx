@@ -224,17 +224,15 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
               Termos de Uso
             </button>
 
-            {/* Ícone do cadeado remanejado: rodapé, no canto inferior direito, discreto e isolado */}
+            {/* Micro cadeado pequeno, discreto e quase imperceptível, sem título ou texto */}
             {(onOpenAdmin || onOpenPortals) && (
               <button
                 type="button"
                 onClick={handleLockClick}
                 id="footer-admin-lock-btn"
-                title="Acesso aos Portais"
-                aria-label="Acesso aos Portais"
-                className="opacity-30 hover:opacity-100 p-1 text-[#DFBAC6] hover:text-white transition-opacity cursor-pointer rounded ml-1"
+                className="opacity-20 hover:opacity-75 p-0.5 text-[#DFBAC6] transition-opacity cursor-pointer rounded ml-2"
               >
-                <Lock className="w-3.5 h-3.5" />
+                <Lock className="w-3 h-3" />
               </button>
             )}
           </div>

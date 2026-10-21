@@ -5,6 +5,7 @@ import { formatPhoneBR } from '../utils/phoneFormatter';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { applyServerPhotoUpdate, fetchOfficialPhotosFromServer } from './photoStore';
 
 const CONFIG_STORAGE_KEY = 'dra_leia_schedule_config_v1';
 const APPOINTMENTS_STORAGE_KEY = 'dra_leia_appointments_v1';
@@ -160,19 +161,41 @@ export function saveAppointments(appointments: Appointment[]): void {
 export async function syncAppointmentsWithServer(): Promise<Appointment[]> {
   if (typeof window === 'undefined') return getAppointments();
   try {
-    const res = await fetch('/api/appointments', {
+    const res = await fetch('/api/appointments?t=' + Date.now(), {
       headers: { 'Cache-Control': 'no-cache, no-store' }
     });
     if (res.ok) {
       const serverApts: Appointment[] = await res.json();
       if (Array.isArray(serverApts) && serverApts.length > 0) {
-        saveAppointments(serverApts);
-        window.dispatchEvent(new CustomEvent('appointments-synced', { detail: serverApts }));
-        return serverApts;
+        const localApts = getAppointments();
+        const map = new Map<string, Appointment>();
+
+        // 1. Indexa agendamentos do servidor
+        serverApts.forEach(apt => {
+          if (apt && apt.id) map.set(apt.id, apt);
+        });
+
+        // 2. Preserva qualquer agendamento local que ainda não conste no servidor
+        localApts.forEach(localApt => {
+          if (localApt && localApt.id && !map.has(localApt.id)) {
+            map.set(localApt.id, localApt);
+            // Sincroniza ativamente o agendamento local no servidor para nunca perdê-lo
+            fetch('/api/appointments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(localApt)
+            }).catch(() => {});
+          }
+        });
+
+        const merged = Array.from(map.values());
+        saveAppointments(merged);
+        window.dispatchEvent(new CustomEvent('appointments-synced', { detail: merged }));
+        return merged;
       }
     }
   } catch (e) {
-    // Falha silenciosa em caso de conexão fraca
+    // Falha silenciosa em caso de conexão momentaneamente fraca
   }
   return getAppointments();
 }
@@ -382,9 +405,15 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
               window.dispatchEvent(new Event('dra_leia_admin_auth_changed'));
               window.dispatchEvent(new Event('dra_leia_user_auth_changed'));
               window.dispatchEvent(new CustomEvent('admin-sync-auth_passwords', { detail: payload.data }));
-            } else if (payload.entity === 'official_photo' && payload.data) {
+            } else if ((payload.entity === 'official_photo' || payload.entity === 'official_photos') && payload.data) {
+              applyServerPhotoUpdate(payload.data);
               window.dispatchEvent(new CustomEvent('admin-sync-official_photo', { detail: payload.data }));
+              window.dispatchEvent(new CustomEvent('admin-sync-official_photos', { detail: payload.data }));
               window.dispatchEvent(new Event('dra_leia_photos_updated'));
+            } else if (payload.entity === 'theme_data' && payload.data) {
+              safeStorage.setItem('dra_leia_theme_palette_v1', JSON.stringify(payload.data));
+              window.dispatchEvent(new CustomEvent('admin-sync-theme_data', { detail: payload.data }));
+              window.dispatchEvent(new Event('dra_leia_theme_palette_changed'));
             }
           }
         } catch (_) {}
@@ -400,7 +429,10 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
     // 2.1 Polling da Nuvem (opcional)
     pollCloudAlerts(triggerAlert).catch(() => {});
 
-    // 2.2 Polling do servidor local
+    // 2.2 Sincronização periódica de fotos oficiais
+    fetchOfficialPhotosFromServer().catch(() => {});
+
+    // 2.3 Polling do servidor local
     try {
       const res = await fetch('/api/appointments/poll?t=' + Date.now(), {
         headers: { 'Cache-Control': 'no-cache, no-store' }
@@ -410,8 +442,19 @@ export function startCrossDeviceAlertPolling(onNewBooking?: (apt: Appointment) =
         if (text && text.trim().startsWith('{')) {
           const data = JSON.parse(text);
           if (data && Array.isArray(data.appointments)) {
-            saveAppointments(data.appointments);
-            window.dispatchEvent(new CustomEvent('appointments-synced', { detail: data.appointments }));
+            const localApts = getAppointments();
+            const map = new Map<string, Appointment>();
+            data.appointments.forEach((apt: Appointment) => {
+              if (apt && apt.id) map.set(apt.id, apt);
+            });
+            localApts.forEach((apt: Appointment) => {
+              if (apt && apt.id && !map.has(apt.id)) {
+                map.set(apt.id, apt);
+              }
+            });
+            const merged = Array.from(map.values());
+            saveAppointments(merged);
+            window.dispatchEvent(new CustomEvent('appointments-synced', { detail: merged }));
 
             const ackedId = safeStorage.getItem(LAST_ACKED_ALERT_KEY);
             if (data.latestAlert && data.latestAlert.appointment && !data.latestAlert.acknowledged) {

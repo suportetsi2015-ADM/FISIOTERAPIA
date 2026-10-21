@@ -93,8 +93,9 @@ export default function App() {
     setActivePortal(portal);
   };
 
+  // Ícone de cadeado agora abre EXCLUSIVAMENTE o Painel do Usuário
   const handleOpenPortalSelector = () => {
-    setPortalChoiceModalOpen(true);
+    handleSelectPortal('usuario');
   };
 
   useEffect(() => {
@@ -261,97 +262,8 @@ export default function App() {
 
       {/* 19. Quick Booking / Inquiry Modal */}
       <BookingModal isOpen={bookingModalOpen} onClose={handleCloseBooking} />
-
-      {/* REQUIREMENT NOTA 2: MODAL SELETOR DE PORTAIS (ADMINISTRADOR vs USUÁRIO) */}
-      {portalChoiceModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setPortalChoiceModalOpen(false)}
-        >
-          <div
-            className="bg-[#FFFDFB] text-[#26161B] max-w-lg w-full rounded-3xl p-6 sm:p-8 border border-[#FCD6E0] shadow-2xl relative overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top accent gradient line */}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#D85072] via-[#BC3859] to-[#9C2744]" />
-
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#FCD6E0]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-[#FFEBF0] text-[#D85072] flex items-center justify-center border border-[#FCD6E0] shadow-2xs">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-serif text-lg sm:text-xl font-bold text-[#26161B]">
-                    Acesso aos Portais
-                  </h3>
-                  <p className="text-xs text-[#8C3B50]">
-                    Selecione o portal correspondente à sua função
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPortalChoiceModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-[#FFEBF0] text-[#8C3B50] hover:text-[#26161B] transition-colors cursor-pointer"
-                title="Fechar"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5">
-              {/* Opção 1: Portal do Administrador */}
-              <button
-                type="button"
-                onClick={() => handleSelectPortal('admin')}
-                className="w-full text-left p-4 sm:p-5 rounded-2xl bg-white hover:bg-[#FFF5F7] border-2 border-[#FCD6E0] hover:border-[#D85072] transition-all group flex items-center gap-4 cursor-pointer shadow-xs"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[#FFEBF0] text-[#D85072] group-hover:bg-[#D85072] group-hover:text-white transition-colors flex items-center justify-center flex-shrink-0 border border-[#FCD6E0]">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div className="flex-1 flex items-center justify-between">
-                  <h4 className="font-serif text-base sm:text-lg font-bold text-[#26161B] group-hover:text-[#9C2744]">
-                    Portal do Administrador
-                  </h4>
-                  <ArrowRight className="w-5 h-5 text-[#8C3B50] group-hover:translate-x-1 transition-transform" />
-                </div>
-              </button>
-
-              {/* Opção 2: Portal do Usuário */}
-              <button
-                type="button"
-                onClick={() => handleSelectPortal('usuario')}
-                className="w-full text-left p-4 sm:p-5 rounded-2xl bg-white hover:bg-[#FFF5F7] border-2 border-[#FCD6E0] hover:border-[#1D7A46] transition-all group flex items-start gap-4 cursor-pointer shadow-xs"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[#EBF7EE] text-[#1D7A46] group-hover:bg-[#1D7A46] group-hover:text-white transition-colors flex items-center justify-center flex-shrink-0 border border-[#B6E3C3] mt-0.5">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-serif text-base font-bold text-[#26161B] group-hover:text-[#1D7A46]">
-                      Portal do Usuário
-                    </h4>
-                    <ArrowRight className="w-4 h-4 text-[#8C3B50] group-hover:translate-x-1 transition-transform" />
-                  </div>
-                  <p className="text-xs text-[#5B444C] mt-1.5 leading-relaxed">
-                    Aulas de Pilates, Gestão Financeira, Dashboard com Gráficos, Agenda & Marcações, Histórico Clínico, Horário & Bloqueios da Agenda, Tabela de Serviços e Planos, Cadastro de Profissionais e Relatórios
-                  </p>
-                </div>
-              </button>
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-[#FCD6E0]/60 text-center">
-              <span className="text-[11px] text-[#8C3B50]">
-                Acesso seguro e restrito em conformidade com a LGPD e normas COFFITO.
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-        </div>
-      )}
-    </>
+    </div>
+  )}
+</>
   );
 }

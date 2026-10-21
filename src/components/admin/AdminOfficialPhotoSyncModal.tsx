@@ -26,6 +26,9 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingSobre, setIsUploadingSobre] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [urlHero, setUrlHero] = useState('');
+  const [urlSobre, setUrlSobre] = useState('');
+  const [urlLogo, setUrlLogo] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -33,6 +36,48 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  const handleApplyHeroUrl = async () => {
+    if (!urlHero.trim()) return;
+    try {
+      setIsUploadingHero(true);
+      await saveOfficialPhoto('studioHero', urlHero.trim());
+      setUrlHero('');
+      showToast('Foto Principal salva por URL e sincronizada com o servidor!');
+    } catch (err: any) {
+      showToast(err?.message || 'Erro ao salvar foto por URL');
+    } finally {
+      setIsUploadingHero(false);
+    }
+  };
+
+  const handleApplySobreUrl = async () => {
+    if (!urlSobre.trim()) return;
+    try {
+      setIsUploadingSobre(true);
+      await saveOfficialPhoto('portrait', urlSobre.trim());
+      setUrlSobre('');
+      showToast('Foto Sobre salva por URL e sincronizada com o servidor!');
+    } catch (err: any) {
+      showToast(err?.message || 'Erro ao salvar foto por URL');
+    } finally {
+      setIsUploadingSobre(false);
+    }
+  };
+
+  const handleApplyLogoUrl = async () => {
+    if (!urlLogo.trim()) return;
+    try {
+      setIsUploadingLogo(true);
+      await saveOfficialPhoto('logo', urlLogo.trim());
+      setUrlLogo('');
+      showToast('Logo atualizado por URL com sucesso!');
+    } catch (err: any) {
+      showToast(err?.message || 'Erro ao salvar logo por URL');
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,9 +96,33 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
     }
   };
 
-  const handleResetLogo = () => {
-    resetOfficialPhotos('logo');
-    showToast('Logo restaurado para o emblema vetorial original!');
+  const handleResetLogo = async () => {
+    await resetOfficialPhotos('logo');
+    showToast('Logo restaurado para o emblema original!');
+  };
+
+  const handleResetHero = async () => {
+    try {
+      setIsUploadingHero(true);
+      await resetOfficialPhotos('studioHero');
+      showToast('Foto Principal restaurada para a original!');
+    } catch (_) {
+      showToast('Erro ao restaurar foto');
+    } finally {
+      setIsUploadingHero(false);
+    }
+  };
+
+  const handleResetSobre = async () => {
+    try {
+      setIsUploadingSobre(true);
+      await resetOfficialPhotos('portrait');
+      showToast('Foto Sobre restaurada para a original!');
+    } catch (_) {
+      showToast('Erro ao restaurar foto');
+    } finally {
+      setIsUploadingSobre(false);
+    }
   };
 
   const handleUploadPrincipal = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +231,7 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2.5">
                 <input
                   type="file"
                   ref={heroInputRef}
@@ -177,11 +246,38 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#D85072] to-[#BC3859] text-white font-bold text-xs hover:from-[#BC3859] hover:to-[#9C2744] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>{isUploadingHero ? 'Gravando no servidor...' : 'Carregar "Dra. Léia Mar - PRINCIPAL.jpeg"'}</span>
+                  <span>{isUploadingHero ? 'Gravando no servidor...' : 'Selecionar Arquivo no Computador/Celular'}</span>
                 </button>
-                <span className="text-[10px] text-center text-[#8C3B50] block mt-1.5 font-medium">
-                  Salva em: <code className="bg-gray-100 px-1 py-0.5 rounded">/images/dra_leia_principal.jpg</code>
-                </span>
+
+                {/* Ou aplicar por URL direta */}
+                <div className="flex gap-1.5">
+                  <input
+                    type="url"
+                    placeholder="Ou cole a URL direta da imagem..."
+                    value={urlHero}
+                    onChange={(e) => setUrlHero(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-[#FCD6E0] text-[11px] text-[#26161B] placeholder-[#A8928B] focus:outline-none focus:ring-1 focus:ring-[#D85072]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyHeroUrl}
+                    disabled={!urlHero.trim() || isUploadingHero}
+                    className="px-3 py-1.5 rounded-lg bg-[#FFEBF0] text-[#9C2744] text-[11px] font-semibold hover:bg-[#FCD6E0] transition-colors border border-[#FCD6E0] disabled:opacity-50 cursor-pointer"
+                  >
+                    Salvar URL
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isUploadingHero}
+                    onClick={handleResetHero}
+                    className="w-full py-1.5 px-3 rounded-lg bg-[#FFFDFB] text-[#8C3B50] hover:bg-[#FFEBF0] border border-[#FCD6E0] font-semibold text-[11px] transition-colors cursor-pointer"
+                  >
+                    Restaurar Foto Padrão
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -195,7 +291,7 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
                   <FileCheck className="w-4 h-4 text-[#1D7A46]" />
                 </div>
                 <h3 className="font-serif text-base font-bold text-[#26161B] mb-1">
-                  Dra. Léia Mar - SOBRE.jpeg
+                  Foto da Fisioterapeuta (Sobre)
                 </h3>
                 <p className="text-[11px] text-[#5B444C] mb-3">
                   Exibida na biografia e autoridade técnica da fisioterapeuta.
@@ -212,7 +308,7 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2.5">
                 <input
                   type="file"
                   ref={sobreInputRef}
@@ -227,11 +323,38 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#D85072] to-[#BC3859] text-white font-bold text-xs hover:from-[#BC3859] hover:to-[#9C2744] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>{isUploadingSobre ? 'Gravando no servidor...' : 'Carregar "Dra. Léia Mar - SOBRE.jpeg"'}</span>
+                  <span>{isUploadingSobre ? 'Gravando no servidor...' : 'Selecionar Arquivo no Computador/Celular'}</span>
                 </button>
-                <span className="text-[10px] text-center text-[#8C3B50] block mt-1.5 font-medium">
-                  Salva em: <code className="bg-gray-100 px-1 py-0.5 rounded">/images/dra_leia_sobre.jpg</code>
-                </span>
+
+                {/* Ou aplicar por URL direta */}
+                <div className="flex gap-1.5">
+                  <input
+                    type="url"
+                    placeholder="Ou cole a URL direta da imagem..."
+                    value={urlSobre}
+                    onChange={(e) => setUrlSobre(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-[#FCD6E0] text-[11px] text-[#26161B] placeholder-[#A8928B] focus:outline-none focus:ring-1 focus:ring-[#D85072]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplySobreUrl}
+                    disabled={!urlSobre.trim() || isUploadingSobre}
+                    className="px-3 py-1.5 rounded-lg bg-[#FFEBF0] text-[#9C2744] text-[11px] font-semibold hover:bg-[#FCD6E0] transition-colors border border-[#FCD6E0] disabled:opacity-50 cursor-pointer"
+                  >
+                    Salvar URL
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isUploadingSobre}
+                    onClick={handleResetSobre}
+                    className="w-full py-1.5 px-3 rounded-lg bg-[#FFFDFB] text-[#8C3B50] hover:bg-[#FFEBF0] border border-[#FCD6E0] font-semibold text-[11px] transition-colors cursor-pointer"
+                  >
+                    Restaurar Foto Padrão
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -242,7 +365,7 @@ export const AdminOfficialPhotoSyncModal: React.FC<AdminOfficialPhotoSyncModalPr
               <div className="flex items-center gap-4">
                 <div className="p-2 bg-[#FFFDFB] rounded-2xl border border-[#FCD6E0] shadow-inner flex items-center justify-center">
                   <img
-                    src="/images/logo_oficial.png"
+                    src={customLogo || '/images/logo_transparente.png'}
                     alt="Logo Oficial Dra. Léia Mar"
                     className="w-14 h-14 object-contain rounded-full shadow-2xs"
                   />

@@ -1,0 +1,19 @@
+{
+  "id": "boutique-rose",
+  "name": "Boutique Rose & Ameixa (Original Dra. Léia Mar)",
+  "description": "Paleta nobre, acolhedora e feminina original da marca Dra. Léia Mar.",
+  "primary": "#D85072",
+  "primaryHover": "#BC3859",
+  "accent": "#9C2744",
+  "accentHover": "#7E1D34",
+  "pageBg": "#FFFDFB",
+  "pageBgGradientMid": "#FFF5F5",
+  "cardBg": "#FFFFFF",
+  "textDark": "#26161B",
+  "textMuted": "#5B444C",
+  "textAccent": "#8C3B50",
+  "borderLight": "#FCD6E0",
+  "badgeBg": "#FFEBF0",
+  "badgeText": "#9C2744",
+  "footerBg": "#211317"
+}

@@ -45,53 +45,185 @@ async function startServer() {
     }
   }));
 
-  // 3. Rota especializada para salvar fotos oficiais
+  // 3. Rotas especializadas para gerenciamento e sincronização de fotos oficiais em tempo real
+  const PHOTOS_CONFIG_PATH = path.resolve(__dirname, 'data/official_photos.json');
+
+  function getOfficialPhotosConfig() {
+    try {
+      if (fs.existsSync(PHOTOS_CONFIG_PATH)) {
+        return JSON.parse(fs.readFileSync(PHOTOS_CONFIG_PATH, 'utf-8'));
+      }
+    } catch (_) {}
+    return {
+      studioHero: '/images/dra_leia_principal.jpg',
+      portrait: '/images/dra_leia_sobre.jpg',
+      customLogo: '/images/logo_transparente.png',
+      heroUpdatedAt: Date.now(),
+      portraitUpdatedAt: Date.now(),
+      logoUpdatedAt: Date.now()
+    };
+  }
+
+  function saveOfficialPhotosConfig(config: any) {
+    try {
+      const dataDir = path.resolve(__dirname, 'data');
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      fs.writeFileSync(PHOTOS_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('[OfficialPhotos] Erro ao gravar config:', e);
+    }
+  }
+
+  // 3.1 Consulta de fotos oficiais atuais (usada por qualquer navegador ao carregar a página)
+  app.get('/api/official-photos', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    const config = getOfficialPhotosConfig();
+    res.json({
+      success: true,
+      data: config
+    });
+  });
+
+  // 3.2 Salvar / Atualizar foto oficial (suporta Base64 de arquivo e URL externa)
   app.post('/api/save-official-photo', (req, res) => {
     try {
       const { type, dataUrl } = req.body;
-      if (!dataUrl) {
-        res.status(400).json({ error: 'Nenhum dado de imagem fornecido' });
+      if (!dataUrl || typeof dataUrl !== 'string') {
+        res.status(400).json({ error: 'Nenhum dado ou URL de imagem fornecido' });
         return;
       }
-      const matches = dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-      if (!matches) {
-        res.status(400).json({ error: 'Formato de imagem inválido' });
-        return;
+
+      const config = getOfficialPhotosConfig();
+      let photoUrl = '';
+      const now = Date.now();
+
+      // Caso 1: Imagem Base64 enviada por upload de arquivo
+      if (dataUrl.startsWith('data:')) {
+        const base64Index = dataUrl.indexOf(';base64,');
+        if (base64Index === -1) {
+          res.status(400).json({ error: 'Formato Base64 inválido (marcador ;base64, não encontrado)' });
+          return;
+        }
+        const rawBase64 = dataUrl.slice(base64Index + 8).trim();
+        const buffer = Buffer.from(rawBase64, 'base64');
+
+        const baseName =
+          type === 'logo' || type === 'customLogo'
+            ? 'logo_oficial'
+            : type === 'principal' || type === 'studioHero' || type === 'hero'
+            ? 'dra_leia_principal'
+            : 'dra_leia_sobre';
+
+        const ext = type === 'logo' || type === 'customLogo' ? '.png' : '.jpg';
+        const filename = `${baseName}${ext}`;
+        const uniqueFilename = `${baseName}_${now}${ext}`;
+
+        const publicDir = path.resolve(__dirname, 'public/images');
+        const assetsDir = path.resolve(__dirname, 'src/assets/images');
+        const distImagesDir = path.resolve(__dirname, 'dist/images');
+
+        fs.mkdirSync(publicDir, { recursive: true });
+        fs.mkdirSync(assetsDir, { recursive: true });
+        if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
+          fs.mkdirSync(distImagesDir, { recursive: true });
+          fs.writeFileSync(path.resolve(distImagesDir, filename), buffer);
+          fs.writeFileSync(path.resolve(distImagesDir, uniqueFilename), buffer);
+        }
+
+        // Grava tanto o nome fixo quanto o nome único versionado
+        fs.writeFileSync(path.resolve(publicDir, filename), buffer);
+        fs.writeFileSync(path.resolve(publicDir, uniqueFilename), buffer);
+        fs.writeFileSync(path.resolve(assetsDir, filename), buffer);
+
+        // Se for logo, também atualiza logo.png para retrocompatibilidade
+        if (baseName === 'logo_oficial') {
+          fs.writeFileSync(path.resolve(publicDir, 'logo.png'), buffer);
+        }
+
+        // A URL única garante que NENHUM navegador ou celular use cache antigo
+        photoUrl = `/images/${uniqueFilename}`;
+      } else {
+        // Caso 2: URL direta informada pelo administrador
+        photoUrl = dataUrl.trim();
       }
-      const buffer = Buffer.from(matches[2], 'base64');
-      const filename =
-        type === 'logo'
-          ? 'logo.png'
-          : type === 'principal' || type === 'studioHero' || type === 'hero'
-          ? 'dra_leia_principal.jpg'
-          : 'dra_leia_sobre.jpg';
 
-      const publicDir = path.resolve(__dirname, 'public/images');
-      const assetsDir = path.resolve(__dirname, 'src/assets/images');
-      const distImagesDir = path.resolve(__dirname, 'dist/images');
-
-      fs.mkdirSync(publicDir, { recursive: true });
-      fs.mkdirSync(assetsDir, { recursive: true });
-      if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
-        fs.mkdirSync(distImagesDir, { recursive: true });
-        fs.writeFileSync(path.resolve(distImagesDir, filename), buffer);
+      // Atualiza o registro canônico
+      if (type === 'studioHero' || type === 'hero' || type === 'principal') {
+        config.studioHero = photoUrl;
+        config.heroUpdatedAt = now;
+      } else if (type === 'portrait' || type === 'sobre') {
+        config.portrait = photoUrl;
+        config.portraitUpdatedAt = now;
+      } else if (type === 'logo' || type === 'customLogo') {
+        config.customLogo = photoUrl;
+        config.logoUpdatedAt = now;
       }
 
-      fs.writeFileSync(path.resolve(publicDir, filename), buffer);
-      fs.writeFileSync(path.resolve(assetsDir, filename), buffer);
+      saveOfficialPhotosConfig(config);
 
-      const photoUrl = `/images/${filename}?t=${Date.now()}`;
+      // Transmissão Server-Sent Events para atualizar todos os navegadores e celulares abertos
+      broadcastSSE({
+        type: 'admin-config-updated',
+        entity: 'official_photos',
+        data: { type, url: photoUrl, photos: config },
+        timestamp: now
+      });
       broadcastSSE({
         type: 'admin-config-updated',
         entity: 'official_photo',
-        data: { type, url: photoUrl },
-        timestamp: Date.now()
+        data: { type, url: photoUrl, photos: config },
+        timestamp: now
       });
 
       res.json({
         success: true,
-        url: photoUrl
+        url: photoUrl,
+        photos: config
       });
+    } catch (err: any) {
+      console.error('[OfficialPhotos] Erro no upload:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 3.3 Restaurar foto para o padrão original
+  app.post('/api/reset-official-photo', (req, res) => {
+    try {
+      const { type } = req.body || {};
+      const config = getOfficialPhotosConfig();
+      const now = Date.now();
+
+      if (!type || type === 'studioHero' || type === 'hero' || type === 'principal') {
+        config.studioHero = `/images/dra_leia_principal.jpg?t=${now}`;
+        config.heroUpdatedAt = now;
+      }
+      if (!type || type === 'portrait' || type === 'sobre') {
+        config.portrait = `/images/dra_leia_sobre.jpg?t=${now}`;
+        config.portraitUpdatedAt = now;
+      }
+      if (!type || type === 'logo' || type === 'customLogo') {
+        config.customLogo = `/images/logo_transparente.png?t=${now}`;
+        config.logoUpdatedAt = now;
+      }
+
+      saveOfficialPhotosConfig(config);
+
+      broadcastSSE({
+        type: 'admin-config-updated',
+        entity: 'official_photos',
+        data: { type: type || 'all', photos: config },
+        timestamp: now
+      });
+      broadcastSSE({
+        type: 'admin-config-updated',
+        entity: 'official_photo',
+        data: { type: type || 'all', photos: config },
+        timestamp: now
+      });
+
+      res.json({ success: true, photos: config });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -127,7 +259,8 @@ async function startServer() {
       req.url.startsWith('/api/header-data') ||
       req.url.startsWith('/api/footer-data') ||
       req.url.startsWith('/api/studio-data') ||
-      req.url.startsWith('/api/auth-passwords')
+      req.url.startsWith('/api/auth-passwords') ||
+      req.url.startsWith('/api/theme-data')
     ) {
       try {
         const handledAdmin = await handleAdminSyncApi(req, res);
@@ -139,6 +272,23 @@ async function startServer() {
         }
         return;
       }
+    }
+    next();
+  });
+
+  // 4.2 Rota externa independente e dedicada para o Painel do Administrador (/admin)
+  app.get(['/admin', '/admin/'], (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    if (isProd || (hasDist && process.env.VITE_DEV !== 'true')) {
+      const adminFile = path.resolve(distDir, 'admin.html');
+      if (fs.existsSync(adminFile)) {
+        res.sendFile(adminFile);
+        return;
+      }
+    } else {
+      req.url = '/admin.html';
     }
     next();
   });
