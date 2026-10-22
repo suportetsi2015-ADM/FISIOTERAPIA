@@ -28,7 +28,7 @@ export const Location: React.FC = () => {
             Onde Estamos
           </h2>
           <p className="text-base sm:text-lg text-[#5B444C] leading-relaxed">
-            Um estúdio acolhedor e climatizado na Cidade Nova, concebido para proporcionar tranquilidade, fácil acesso e conforto em cada sessão com a Dra. Léia Mar.
+            Um estúdio acolhedor e climatizado em {clinic.neighborhood || "Manaus"}, concebido para proporcionar tranquilidade, fácil acesso e conforto em cada sessão com a Dra. Léia Mar.
           </p>
         </div>
 
@@ -50,9 +50,11 @@ export const Location: React.FC = () => {
                   <p className="text-base font-semibold text-[#26161B] leading-snug">
                     {clinic.address}
                   </p>
-                  <p className="text-sm font-medium text-[#D85072] mt-0.5">
-                    ({clinic.landmarks})
-                  </p>
+                  {(clinic.addressComplement || clinic.landmarks) && (
+                    <p className="text-sm font-medium text-[#D85072] mt-0.5">
+                      ({clinic.addressComplement || clinic.landmarks})
+                    </p>
+                  )}
                   <p className="text-sm text-[#5B444C] mt-0.5">
                     {clinic.neighborhood} • {clinic.cityState}
                   </p>
@@ -62,7 +64,7 @@ export const Location: React.FC = () => {
                 </div>
               </div>
 
-              {/* Landmarks */}
+              {/* Landmarks / Reference Point */}
               <div className="flex items-start gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-[#FFEBF0] text-[#D85072] flex items-center justify-center flex-shrink-0 mt-1">
                   <Compass className="w-5 h-5" />
@@ -72,7 +74,7 @@ export const Location: React.FC = () => {
                     Ponto de Referência
                   </h4>
                   <p className="text-sm text-[#5B444C] leading-relaxed">
-                    Localizado nos <strong>Altos da Academia NEW FIT</strong>, na movimentada e acessível Av. Noel Nutels na Cidade Nova.
+                    {clinic.referencePoint || clinic.landmarks || "Localizado com acesso seguro e facilitado."}
                   </p>
                 </div>
               </div>
@@ -102,8 +104,8 @@ export const Location: React.FC = () => {
                     Horário de Atendimento
                   </h4>
                   <div className="space-y-1">
-                    {clinic.hours.map((h) => (
-                      <p key={h.days} className="text-xs sm:text-sm text-[#5B444C]">
+                    {clinic.hours.map((h, idx) => (
+                      <p key={idx} className="text-xs sm:text-sm text-[#5B444C]">
                         <strong className="font-medium text-[#26161B]">{h.days}:</strong> {h.time}
                       </p>
                     ))}

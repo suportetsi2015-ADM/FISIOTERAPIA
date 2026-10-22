@@ -168,20 +168,37 @@ export const AdminLocalizacaoTab: React.FC<AdminLocalizacaoTabProps> = ({
               />
             </div>
 
-            {/* Ponto de Referência / Complemento */}
+            {/* Complemento do Endereço */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#26161B] mb-1.5">
-                Ponto de Referência / Complemento do Espaço
+                Complemento do Endereço (ex: Dentro da Academia...)
               </label>
               <input
                 type="text"
-                value={clinicForm.landmarks}
-                onChange={(e) => setClinicForm({ ...clinicForm, landmarks: e.target.value })}
-                placeholder="Ex: Altos da Academia NEW FIT"
-                className="w-full px-4 py-2.5 rounded-xl border border-[#FCD6E0] text-sm text-[#26161B] font-semibold text-[#D85072] focus:outline-none focus:ring-2 focus:ring-[#D85072]"
+                value={clinicForm.addressComplement !== undefined ? clinicForm.addressComplement : clinicForm.landmarks || ''}
+                onChange={(e) => setClinicForm({ ...clinicForm, addressComplement: e.target.value, landmarks: e.target.value })}
+                placeholder="Ex: Dentro das dependências da Academia INFITNESS"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#FCD6E0] text-sm text-[#26161B] font-medium focus:outline-none focus:ring-2 focus:ring-[#D85072]"
               />
               <p className="text-[11px] text-[#8C3B50] mt-1">
-                Aparece destacado na One Page para facilitar a chegada das alunas.
+                Exibido em destaque em rosa logo abaixo do endereço no card da One Page.
+              </p>
+            </div>
+
+            {/* Ponto de Referência Completo */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#26161B] mb-1.5">
+                Ponto de Referência (Texto Exibido no Card)
+              </label>
+              <textarea
+                rows={2}
+                value={clinicForm.referencePoint !== undefined ? clinicForm.referencePoint : clinicForm.landmarks || ''}
+                onChange={(e) => setClinicForm({ ...clinicForm, referencePoint: e.target.value })}
+                placeholder="Ex: Localizado nas dependências da Academia INFITNESS, no Novo Aleixo..."
+                className="w-full px-4 py-2.5 rounded-xl border border-[#FCD6E0] text-sm text-[#26161B] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#D85072]"
+              />
+              <p className="text-[11px] text-[#8C3B50] mt-1">
+                Texto descritivo completo da seção "PONTO DE REFERÊNCIA" do card da One Page.
               </p>
             </div>
 

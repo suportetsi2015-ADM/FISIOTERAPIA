@@ -1,0 +1,60 @@
+{
+  "name": "Dra. Léia Mar",
+  "crefito": "426910-F",
+  "role": "Fisioterapeuta Especialista em Pilates",
+  "phoneDisplay": "(92) 98620-1641",
+  "phoneRaw": "5592986201641",
+  "instagramHandle": "@draleiamar.pilates",
+  "instagramUrl": "https://instagram.com",
+  "defaultWhatsAppMessage": "Olá Dra. Léia! Gostaria de saber mais sobre as sessões de Pilates no seu estúdio e agendar uma avaliação.",
+  "heroEyebrow": "PILATES • FISIOTERAPIA • MANAUS-AM",
+  "heroTitle": "Seu corpo em movimento.",
+  "heroHighlight": "Sua vida com mais alegria e leveza.",
+  "heroDescription": "Pilates privativo e personalizado conduzido pela Dra. Léia Mar em Manaus. Desenvolva força profunda, flexibilidade, postura e liberdade sem dor em um ambiente acolhedor.",
+  "heroCta1Text": "Agendamento Automático",
+  "heroCta2Text": "Falar no WhatsApp",
+  "heroReassurance1": "Atendimento privativo & exclusivo",
+  "heroReassurance2": "Novo Aleixo • Manaus-AM",
+  "heroReassurance3": "Dentro da Academia Infitness",
+  "aboutTag": "SOBRE A FISIOTERAPEUTA",
+  "aboutQuote": "“Meu propósito é ajudar cada mulher a se movimentar com liberdade, sem dor, desenvolvendo força profunda e autoestima em cada respiração.”",
+  "aboutPhilosophy": "Acredito no Pilates como uma experiência de transformação e autocuidado. Fugindo do ambiente barulhento de academias comuns, ofereço um atendimento 100% individualizado, com comandos precisos, correção biomecânica e acolhimento humano.",
+  "aboutCredentials": [
+    {
+      "id": "cred-1",
+      "title": "Graduação em Fisioterapia",
+      "desc": "Formação clínica sólida com ênfase em biomecânica e reabilitação postural."
+    },
+    {
+      "id": "cred-2",
+      "title": "Especialização em Pilates Clássico",
+      "desc": "Domínio completo de todos os aparelhos: Reformer, Cadillac, Wunda Chair e Ladder Barrel."
+    },
+    {
+      "id": "cred-3",
+      "title": "Certificações em Coluna & Dor",
+      "desc": "Tratamento conservador de hérnia de disco, lombalgias crônicas e estabilização."
+    },
+    {
+      "id": "cred-4",
+      "title": "Atuação Exclusiva em Pilates",
+      "desc": "Foco total no método como terapia e qualidade de vida em Manaus."
+    }
+  ],
+  "address": "Av. Cel. Sávio Belota, 316",
+  "addressComplement": "Dentro das dependências da Academia INFITNESS",
+  "neighborhood": "Novo Aleixo",
+  "cityState": "Manaus - AM",
+  "cep": "69029-180",
+  "landmarks": "Dentro das dependências da Academia INFITNESS",
+  "referencePoint": "Localizado nas dependências da Academia INFITNESS, no Novo Aleixo, com ambiente privativo e acolhedor.",
+  "parkingInfo": "Fácil acesso com facilidade de estacionamento nas proximidades e acesso seguro.",
+  "googleMapsDirectionsUrl": "https://www.google.com/maps/search/?api=1&query=Av.+Cel.+S%C3%A1vio+Belota,+316+-+Novo+Aleixo,+Manaus+-+AM,+69029-180",
+  "wazeUrl": "https://waze.com/ul?q=Av+Cel+Savio+Belota+316+Manaus",
+  "googleMapsEmbedUrl": "https://maps.google.com/maps?q=Av.%20Cel.%20S%C3%A1vio%20Belota%2C%20316%20-%20Novo%20Aleixo%2C%20Manaus%20-%20AM&t=&z=16&ie=UTF8&iwloc=&output=embed",
+  "hours": [
+    { "days": "Segunda a Sexta-feira", "time": "08:00 às 19:00" },
+    { "days": "Sábados", "time": "Fechado" },
+    { "days": "Domingos e Feriados", "time": "Fechado" }
+  ]
+}
