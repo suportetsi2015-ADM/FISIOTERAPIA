@@ -251,10 +251,11 @@ export default function App() {
         <Location />
       </main>
 
-      {/* 17. Footer com cadeado que abre o menu dos 2 portais */}
+      {/* 17. Footer com cadeado do Portal do Usuário e cadeado temporário do Portal do Administrador */}
       <Footer
-        onOpenAdmin={handleOpenPortalSelector}
-        onOpenPortals={handleOpenPortalSelector}
+        onOpenUser={() => handleSelectPortal('usuario')}
+        onOpenAdmin={() => handleSelectPortal('admin')}
+        onOpenPortals={() => handleSelectPortal('usuario')}
       />
 
       {/* 18. Persistent Floating WhatsApp Button (Bottom Right) */}

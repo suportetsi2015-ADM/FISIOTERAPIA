@@ -260,7 +260,8 @@ async function startServer() {
       req.url.startsWith('/api/footer-data') ||
       req.url.startsWith('/api/studio-data') ||
       req.url.startsWith('/api/auth-passwords') ||
-      req.url.startsWith('/api/theme-data')
+      req.url.startsWith('/api/theme-data') ||
+      req.url.startsWith('/api/security-alerts')
     ) {
       try {
         const handledAdmin = await handleAdminSyncApi(req, res);

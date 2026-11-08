@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { safeStorage } from '../utils/safeStorage';
 
-export const SERVER_OFFICIAL_HERO = '/images/dra_leia_principal.jpg';
-export const SERVER_OFFICIAL_PORTRAIT = '/images/dra_leia_sobre.jpg';
+export const SERVER_OFFICIAL_HERO = '/images/dra_leia_principal.jpg?v=20261108_leiamar';
+export const SERVER_OFFICIAL_PORTRAIT = '/images/dra_leia_sobre.jpg?v=20261108_leiamar';
 export const SERVER_OFFICIAL_LOGO = '/images/logo_transparente.png';
 
-const STORAGE_PORTRAIT_KEY = 'dra_leia_photo_portrait_v6';
-const STORAGE_HERO_KEY = 'dra_leia_photo_hero_v6';
-const STORAGE_LOGO_KEY = 'dra_leia_logo_custom_v6';
+const STORAGE_PORTRAIT_KEY = 'dra_leia_photo_portrait_v7';
+const STORAGE_HERO_KEY = 'dra_leia_photo_hero_v7';
+const STORAGE_LOGO_KEY = 'dra_leia_logo_custom_v7';
 export const PHOTOS_CHANGED_EVENT = 'dra_leia_photos_updated';
 const BROADCAST_CHANNEL_NAME = 'dra_leia_photos_sync_channel';
 

@@ -19,21 +19,14 @@ import { useFooterData, SocialLinkItem } from '../data/footerStore';
 interface FooterProps {
   onOpenAdmin?: () => void;
   onOpenPortals?: () => void;
+  onOpenUser?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals, onOpenUser }) => {
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const clinic = useClinicData();
   const { config: footer } = useFooterData();
-
-  const handleLockClick = () => {
-    if (onOpenPortals) {
-      onOpenPortals();
-    } else if (onOpenAdmin) {
-      onOpenAdmin();
-    }
-  };
 
   const renderSocialIcon = (item: SocialLinkItem) => {
     if (item.customIconUrl) {
@@ -224,13 +217,29 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenPortals }) =>
               Termos de Uso
             </button>
 
-            {/* Micro cadeado pequeno, discreto e quase imperceptível, sem título ou texto */}
-            {(onOpenAdmin || onOpenPortals) && (
+            {/* Micro cadeado do Portal do Usuário */}
+            {(onOpenUser || onOpenPortals) && (
               <button
                 type="button"
-                onClick={handleLockClick}
-                id="footer-admin-lock-btn"
+                onClick={onOpenUser || onOpenPortals}
+                id="footer-user-lock-btn"
+                title="Portal do Usuário"
+                aria-label="Portal do Usuário"
                 className="opacity-20 hover:opacity-75 p-0.5 text-[#DFBAC6] transition-opacity cursor-pointer rounded ml-2"
+              >
+                <Lock className="w-3 h-3" />
+              </button>
+            )}
+
+            {/* Micro cadeado temporário do Portal do Administrador (mesmo tamanho, mesmo layout discreto) */}
+            {onOpenAdmin && (
+              <button
+                type="button"
+                onClick={onOpenAdmin}
+                id="footer-admin-lock-btn"
+                title="Portal do Administrador"
+                aria-label="Portal do Administrador"
+                className="opacity-20 hover:opacity-75 p-0.5 text-[#DFBAC6] transition-opacity cursor-pointer rounded ml-1"
               >
                 <Lock className="w-3 h-3" />
               </button>

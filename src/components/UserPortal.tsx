@@ -20,9 +20,15 @@ import {
   Volume2,
   Sparkles,
   Banknote,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { useUserAuth } from '../data/userAuthStore';
+import {
+  usePortalSecurity,
+  recordFailedAttempt,
+  recordSuccessfulLogin
+} from '../data/securityLockoutStore';
 import { AdminAulasPilatesTab } from './admin/AdminAulasPilatesTab';
 import { AdminAgendaMarcacoesTab } from './admin/AdminAgendaMarcacoesTab';
 import { AdminHistoricoClinicoTab } from './admin/AdminHistoricoClinicoTab';
@@ -64,10 +70,17 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
   const clinic = useClinicData();
   const { isAuthenticated, login, logout } = useUserAuth();
 
-  // Login form state
+  // Login form state & Segurança contra tentativas
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const { isBlocked, remainingSeconds } = usePortalSecurity('usuario');
+
+  const formatLockoutTimer = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   // Active User Tab
   const [activeTab, setActiveTab] = useState<UserTab>('aulas');
@@ -234,15 +247,21 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    if (isBlocked) {
+      setLoginError(`Acesso bloqueado por segurança! Aguarde ${formatLockoutTimer(remainingSeconds)} ou solicite liberação ao Administrador.`);
+      return;
+    }
     if (!passwordInput) {
       setLoginError('Por favor, digite sua senha de acesso.');
       return;
     }
     const success = login(passwordInput);
     if (success) {
+      recordSuccessfulLogin('usuario');
       setPasswordInput('');
     } else {
-      setLoginError('Senha incorreta. Verifique suas credenciais de acesso.');
+      const result = recordFailedAttempt('usuario');
+      setLoginError(result.errorMessage);
     }
   };
 
@@ -269,12 +288,33 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
             </p>
           </div>
 
-          {loginError && (
+          {/* Bloqueio de Segurança por 3 Tentativas Erradas */}
+          {isBlocked ? (
+            <div className="mb-6 p-4 rounded-2xl bg-red-50 border-2 border-red-300 text-red-900 shadow-sm animate-pulse">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-sm text-red-900">
+                    PLATAFORMA BLOQUEADA POR SEGURANÇA
+                  </h4>
+                  <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                    O acesso foi temporariamente bloqueado devido a <strong>3 tentativas incorretas consecutivas</strong>. O <strong>Administrador da clínica foi notificado</strong> em tempo real.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 bg-red-100/80 px-3 py-1.5 rounded-lg border border-red-200">
+                    <span className="text-xs font-semibold text-red-800">Tempo restante de bloqueio:</span>
+                    <span className="font-mono font-bold text-sm text-red-950 bg-white px-2 py-0.5 rounded shadow-inner">
+                      {formatLockoutTimer(remainingSeconds)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : loginError ? (
             <div className="mb-6 p-3.5 rounded-xl bg-[#FDEDF0] border border-[#FCD6E0] text-xs font-semibold text-[#9C2744] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{loginError}</span>
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleLoginSubmit} className="space-y-5">
             <div>
@@ -286,14 +326,20 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder=""
-                  autoFocus
-                  className="w-full px-4 py-3 rounded-xl border border-[#FCD6E0] bg-white text-sm text-[#26161B] focus:outline-none focus:ring-2 focus:ring-[#D85072] focus:border-transparent transition-all pr-11"
+                  disabled={isBlocked}
+                  placeholder={isBlocked ? 'Acesso bloqueado por tentativas' : ''}
+                  autoFocus={!isBlocked}
+                  className={`w-full px-4 py-3 rounded-xl border text-sm transition-all pr-11 ${
+                    isBlocked
+                      ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'border-[#FCD6E0] bg-white text-[#26161B] focus:outline-none focus:ring-2 focus:ring-[#D85072] focus:border-transparent'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C3B50] hover:text-[#26161B] p-1 cursor-pointer"
+                  disabled={isBlocked}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C3B50] hover:text-[#26161B] p-1 cursor-pointer disabled:opacity-40"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -302,10 +348,15 @@ export const UserPortal: React.FC<UserPortalProps> = ({ onBackToSite, onSwitchTo
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D85072] to-[#BC3859] text-white font-semibold text-sm hover:from-[#BC3859] hover:to-[#9C2744] transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isBlocked}
+              className={`w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2 ${
+                isBlocked
+                  ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                  : 'bg-gradient-to-r from-[#D85072] to-[#BC3859] hover:from-[#BC3859] hover:to-[#9C2744] active:scale-[0.99] cursor-pointer'
+              }`}
             >
               <Lock className="w-4 h-4" />
-              <span>Entrar no Portal do Usuário</span>
+              <span>{isBlocked ? 'Plataforma Bloqueada' : 'Entrar no Portal do Usuário'}</span>
             </button>
           </form>
 

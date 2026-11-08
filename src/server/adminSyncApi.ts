@@ -103,7 +103,8 @@ export async function handleAdminSyncApi(req: any, res: any): Promise<boolean> {
     '/api/footer-data': 'footer_data',
     '/api/studio-data': 'studio_data',
     '/api/auth-passwords': 'auth_passwords',
-    '/api/theme-data': 'theme_data'
+    '/api/theme-data': 'theme_data',
+    '/api/security-alerts': 'security_alerts'
   };
 
   for (const [routePrefix, entityName] of Object.entries(routeEntityMap)) {

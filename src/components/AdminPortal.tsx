@@ -43,10 +43,20 @@ import {
   BarChart3,
   Banknote,
   Sliders,
-  Palette
+  Palette,
+  ShieldAlert,
+  AlertTriangle
 } from 'lucide-react';
 import { useAdminAuth } from '../data/adminAuthStore';
 import { setUserPassword } from '../data/userAuthStore';
+import {
+  usePortalSecurity,
+  recordFailedAttempt,
+  recordSuccessfulLogin,
+  getPortalLockout,
+  adminUnlockPortal,
+  SecurityAlert
+} from '../data/securityLockoutStore';
 import { useOfficialPhotos, processImageFile, saveOfficialPhoto, resetOfficialPhotos } from '../data/photoStore';
 import {
   getStoredClinicData,
@@ -93,10 +103,18 @@ export type AdminTab =
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
   const { isAuthenticated, login, logout, changePassword } = useAdminAuth();
 
-  // Login form state
+  // Login form state & Segurança contra tentativas
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const { isBlocked, remainingSeconds, alerts, activeAlertsCount, unlock } = usePortalSecurity('admin');
+  const userPortalLockout = getPortalLockout('usuario');
+
+  const formatLockoutTimer = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   // Admin tabs
   const [activeTab, setActiveTab] = useState<AdminTab>('inicio');
@@ -180,15 +198,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    if (isBlocked) {
+      setLoginError(`Acesso bloqueado por segurança! Aguarde ${formatLockoutTimer(remainingSeconds)}.`);
+      return;
+    }
     if (!passwordInput) {
       setLoginError('Por favor, informe a senha de acesso.');
       return;
     }
     const success = login(passwordInput);
     if (success) {
+      recordSuccessfulLogin('admin');
       setPasswordInput('');
     } else {
-      setLoginError('Senha incorreta. Verifique suas credenciais de acesso.');
+      const res = recordFailedAttempt('admin');
+      setLoginError(res.errorMessage);
     }
   };
 
@@ -382,12 +406,33 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
             </p>
           </div>
 
-          {loginError && (
+          {/* Bloqueio de Segurança por 3 Tentativas Erradas */}
+          {isBlocked ? (
+            <div className="mb-6 p-4 rounded-2xl bg-red-50 border-2 border-red-300 text-red-900 shadow-sm animate-pulse">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-sm text-red-900">
+                    PLATAFORMA BLOQUEADA POR SEGURANÇA
+                  </h4>
+                  <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                    Acesso temporariamente bloqueado após <strong>3 tentativas incorretas consecutivas</strong>.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 bg-red-100/80 px-3 py-1.5 rounded-lg border border-red-200">
+                    <span className="text-xs font-semibold text-red-800">Tempo restante de bloqueio:</span>
+                    <span className="font-mono font-bold text-sm text-red-950 bg-white px-2 py-0.5 rounded shadow-inner">
+                      {formatLockoutTimer(remainingSeconds)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : loginError ? (
             <div className="mb-6 p-3.5 rounded-xl bg-[#FDEDF0] border border-[#FCD6E0] text-xs font-semibold text-[#9C2744] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{loginError}</span>
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleLoginSubmit} className="space-y-5">
             <div>
@@ -399,14 +444,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder=""
-                  autoFocus
-                  className="w-full px-4 py-3 rounded-xl border border-[#FCD6E0] bg-white text-sm text-[#26161B] focus:outline-none focus:ring-2 focus:ring-[#D85072] focus:border-transparent transition-all pr-11"
+                  disabled={isBlocked}
+                  placeholder={isBlocked ? 'Acesso bloqueado por tentativas' : ''}
+                  autoFocus={!isBlocked}
+                  className={`w-full px-4 py-3 rounded-xl border text-sm transition-all pr-11 ${
+                    isBlocked
+                      ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'border-[#FCD6E0] bg-white text-[#26161B] focus:outline-none focus:ring-2 focus:ring-[#D85072] focus:border-transparent'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C3B50] hover:text-[#26161B] p-1"
+                  disabled={isBlocked}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C3B50] hover:text-[#26161B] p-1 disabled:opacity-40"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -415,10 +466,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D85072] to-[#BC3859] text-white font-semibold text-sm hover:from-[#BC3859] hover:to-[#9C2744] transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+              disabled={isBlocked}
+              className={`w-full py-3.5 px-4 rounded-xl text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center gap-2 ${
+                isBlocked
+                  ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                  : 'bg-gradient-to-r from-[#D85072] to-[#BC3859] hover:from-[#BC3859] hover:to-[#9C2744] active:scale-[0.99] cursor-pointer'
+              }`}
             >
               <Lock className="w-4 h-4" />
-              <span>Entrar no Painel Administrativo</span>
+              <span>{isBlocked ? 'Plataforma Bloqueada' : 'Entrar no Painel Administrativo'}</span>
             </button>
           </form>
 
@@ -440,6 +496,43 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
   // AUTHENTICATED: Full Administrator Portal
   return (
     <div className="min-h-screen bg-[#FFFDFB] text-[#26161B] flex flex-col selection:bg-[#D85072] selection:text-white">
+      {/* Alerta de Segurança Urgente no Topo (Notifica o Administrador em Tempo Real) */}
+      {(activeAlertsCount > 0 || userPortalLockout.isBlocked) && (
+        <div className="bg-red-600 text-white px-4 py-3 shadow-md flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 border-b border-red-700">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1 rounded-full bg-white/20 animate-pulse">
+              <ShieldAlert className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wide">
+                ALERTA DE SEGURANÇA: Bloqueio ativado por 3 tentativas incorretas de senha!
+              </span>
+              <p className="text-[11px] text-red-100 hidden sm:block">
+                O acesso foi temporariamente bloqueado para proteger a clínica. Você pode desbloquear a qualquer momento.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                unlock('all');
+                setSecurityToast('Plataforma desbloqueada com sucesso para todos os usuários!');
+                setTimeout(() => setSecurityToast(''), 4500);
+              }}
+              className="px-3 py-1.5 bg-white text-red-700 hover:bg-red-50 text-xs font-bold rounded-lg shadow transition-colors cursor-pointer"
+            >
+              Desbloquear Plataforma Imediatamente
+            </button>
+            <button
+              onClick={() => setActiveTab('security')}
+              className="px-3 py-1.5 bg-red-800/80 hover:bg-red-900 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              Ver Detalhes
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Admin Navigation Bar */}
       <header className="bg-white border-b border-[#FCD6E0] sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -710,6 +803,109 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToSite }) => {
                 <span>{securityError}</span>
               </div>
             )}
+
+            {/* Painel Central de Segurança & Desbloqueio da Plataforma */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#FCD6E0] shadow-sm mb-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-[#FCD6E0]">
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-[#26161B] flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-[#D85072]" />
+                    <span>Controle de Bloqueio & Notificações de Segurança</span>
+                  </h3>
+                  <p className="text-xs text-[#5B444C] mt-1">
+                    Gerencie o bloqueio automático de segurança (disparado após 3 erros consecutivos de senha).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    unlock('all');
+                    setSecurityToast('Plataforma desbloqueada com sucesso! O acesso do Usuário e do Administrador foi restabelecido.');
+                    setTimeout(() => setSecurityToast(''), 4500);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#1D7A46] to-[#165E36] text-white font-bold text-xs sm:text-sm hover:from-[#165E36] hover:to-[#104728] shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Desbloquear Toda a Plataforma Agora</span>
+                </button>
+              </div>
+
+              {/* Status dos Portais */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                <div className={`p-4 rounded-2xl border ${
+                  userPortalLockout.isBlocked
+                    ? 'bg-red-50 border-red-300 text-red-900'
+                    : 'bg-[#FDFBF7] border-[#FCD6E0] text-[#26161B]'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider">Portal do Usuário</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      userPortalLockout.isBlocked
+                        ? 'bg-red-200 text-red-800'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {userPortalLockout.isBlocked ? 'Bloqueado por 3 erros' : 'Acesso Liberado'}
+                    </span>
+                  </div>
+                  <p className="text-xs mt-2 text-[#5B444C]">
+                    Tentativas registradas: <strong>{userPortalLockout.attempts} de 3</strong>
+                  </p>
+                </div>
+
+                <div className={`p-4 rounded-2xl border ${
+                  isBlocked
+                    ? 'bg-red-50 border-red-300 text-red-900'
+                    : 'bg-[#FDFBF7] border-[#FCD6E0] text-[#26161B]'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider">Portal do Administrador</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      isBlocked
+                        ? 'bg-red-200 text-red-800'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {isBlocked ? 'Bloqueado por 3 erros' : 'Acesso Liberado'}
+                    </span>
+                  </div>
+                  <p className="text-xs mt-2 text-[#5B444C]">
+                    Tentativas registradas: <strong>{remainingSeconds > 0 ? '3 de 3' : '0 de 3'}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Histórico de Notificações de Segurança */}
+              {alerts && alerts.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-[#FCD6E0]">
+                  <h4 className="text-xs font-bold text-[#26161B] uppercase tracking-wider mb-3">
+                    Histórico de Alertas de Acesso & Bloqueio ({alerts.length})
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {alerts.map((al) => (
+                      <div
+                        key={al.id}
+                        className={`p-3 rounded-xl border text-xs flex items-start justify-between gap-3 ${
+                          al.status === 'bloqueado'
+                            ? 'bg-red-50/60 border-red-200 text-red-900'
+                            : 'bg-gray-50 border-gray-200 text-gray-700'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-semibold">{al.message}</p>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            Data: {al.dateFormatted} • Alvo: {al.portal === 'admin' ? 'Administrador' : 'Usuário'}
+                          </p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
+                          al.status === 'bloqueado' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {al.status === 'bloqueado' ? 'Bloqueado' : 'Desbloqueado'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <form onSubmit={handleChangePasswordSubmit} className="bg-white rounded-3xl p-6 sm:p-8 border border-[#FCD6E0] shadow-sm space-y-5">

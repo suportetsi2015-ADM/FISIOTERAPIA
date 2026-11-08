@@ -504,7 +504,8 @@ async function handleAdminSyncApi(req, res) {
     "/api/footer-data": "footer_data",
     "/api/studio-data": "studio_data",
     "/api/auth-passwords": "auth_passwords",
-    "/api/theme-data": "theme_data"
+    "/api/theme-data": "theme_data",
+    "/api/security-alerts": "security_alerts"
   };
   for (const [routePrefix, entityName] of Object.entries(routeEntityMap)) {
     if (url === routePrefix || url.startsWith(`${routePrefix}?`)) {
@@ -730,7 +731,7 @@ async function startServer() {
         return;
       }
     }
-    if (req.url.startsWith("/api/clinic-data") || req.url.startsWith("/api/schedule-config") || req.url.startsWith("/api/pilates-data") || req.url.startsWith("/api/clinical-patients") || req.url.startsWith("/api/payroll-adjustments") || req.url.startsWith("/api/faq-data") || req.url.startsWith("/api/header-data") || req.url.startsWith("/api/footer-data") || req.url.startsWith("/api/studio-data") || req.url.startsWith("/api/auth-passwords") || req.url.startsWith("/api/theme-data")) {
+    if (req.url.startsWith("/api/clinic-data") || req.url.startsWith("/api/schedule-config") || req.url.startsWith("/api/pilates-data") || req.url.startsWith("/api/clinical-patients") || req.url.startsWith("/api/payroll-adjustments") || req.url.startsWith("/api/faq-data") || req.url.startsWith("/api/header-data") || req.url.startsWith("/api/footer-data") || req.url.startsWith("/api/studio-data") || req.url.startsWith("/api/auth-passwords") || req.url.startsWith("/api/theme-data") || req.url.startsWith("/api/security-alerts")) {
       try {
         const handledAdmin = await handleAdminSyncApi(req, res);
         if (handledAdmin) return;
